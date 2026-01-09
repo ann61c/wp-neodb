@@ -248,15 +248,15 @@
 .doulist-item .doulist-subject .abstract {
     font-size: 14px;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.6;
-    max-height: 3.2em;
+    max-height: 4.8em;
 }
 .doulist-item .doulist-subject img {
-    width: 96px !important;
-    height: 96px !important;
+    max-width: 96px !important;
+    max-height: 128px !important;
     border-radius: 4px;
     object-fit: cover;
 }
