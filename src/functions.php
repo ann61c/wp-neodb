@@ -309,7 +309,7 @@ class WPD_Douban
         }
 
         if ($movie->tmdb_id) {
-            $response = wp_remote_get("https://hk.fatesinger.com/api/" . $movie->tmdb_type . "/" . $movie->tmdb_id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
+            $response = wp_remote_get("https://api.themoviedb.org/3/" . $movie->tmdb_type . "/" . $movie->tmdb_id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
             if (is_wp_error($response)) {
                 return false;
             }
@@ -393,7 +393,7 @@ class WPD_Douban
             return $movie;
         }
 
-        $response = wp_remote_get("https://hk.fatesinger.com/api/" . $type . "/" . $id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
+        $response = wp_remote_get("https://api.themoviedb.org/3/" . $type . "/" . $id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
         if (is_wp_error($response)) {
             return false;
         }
