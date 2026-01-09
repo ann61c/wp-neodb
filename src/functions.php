@@ -31,15 +31,19 @@ class WPD_Douban
         add_action('wp_head', [$this, 'db_custom_style']);
     }
 
-    public function add_log($type = 'movie')
+    public function add_log($type = 'movie', $action = 'sync', $source = 'douban', $message = '')
     {
         global $wpdb;
+        if (empty($message)) {
+            $message = $action . ' success';
+        }
         $wpdb->insert($wpdb->douban_log, [
             'type' => $type,
-            'action' => 'sync',
+            'action' => $action,
+            'source' => $source,
             'create_time' => date('Y-m-d H:i:s'),
             'status' => 'success',
-            'message' => 'sync success',
+            'message' => $message,
             'account_id' => $this->uid
         ]);
     }
@@ -451,6 +455,8 @@ class WPD_Douban
             $movie_id = '';
             if ($wpdb->insert_id) {
                 $movie_id = $wpdb->insert_id;
+                $title = isset($data['title']) ? $data['title'] : $data['name'];
+                $this->add_log($type, 'embed', 'tmdb', $title);
                 if ($data['genres']) foreach ($data['genres'] as $genre) {
                         $wpdb->insert(
                             $wpdb->douban_genres,
@@ -540,6 +546,7 @@ class WPD_Douban
             $movie_id = '';
             if ($wpdb->insert_id) {
                 $movie_id = $wpdb->insert_id;
+                $this->add_log($type, 'embed', 'douban', $data['title']);
                 if ($data['genres']) foreach ($data['genres'] as $genre) {
                         $wpdb->insert(
                             $wpdb->douban_genres,
@@ -661,6 +668,12 @@ class WPD_Douban
         // Insert into database
         $wpdb->insert($wpdb->douban_movies, $insert_data);
         $movie_id = $wpdb->insert_id;
+
+        // Log the embed action
+        if ($movie_id) {
+            $title = $data['display_title'] ?? $data['title'];
+            $this->add_log($type, 'embed', 'neodb', $title);
+        }
 
         // Insert genres if available
         if ($movie_id && isset($data['genre']) && is_array($data['genre'])) {

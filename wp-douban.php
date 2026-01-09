@@ -133,6 +133,7 @@ function wpd_install()
         "id int(10) NOT NULL auto_increment," .
         "type varchar(16)," .
         "action varchar(16)," .
+        "source varchar(16) DEFAULT 'douban'," .
         "create_time datetime," .
         "status varchar(16)," .
         "message varchar(256)," .
@@ -144,6 +145,7 @@ function wpd_install()
 
     $update_table['douban_movies'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `tmdb_id` int(10) AFTER `douban_id`, ADD COLUMN `tmdb_type` varchar(16) AFTER `tmdb_id`;";
     $update_table['neodb'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `neodb_id` varchar(64) AFTER `tmdb_type`;";
+    $update_table['log_source'] = "ALTER TABLE {$wpdb->douban_log} ADD COLUMN `source` varchar(16) DEFAULT 'douban' AFTER `action`;";
 
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_collection}'") != $wpdb->douban_collection) dbDelta($create_table['douban_collection']);
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_faves}'") != $wpdb->douban_faves) dbDelta($create_table['douban_faves']);
@@ -156,6 +158,13 @@ function wpd_install()
         $wpdb->query($update_table['douban_movies']);
     } elseif (!$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_movies} LIKE 'neodb_id'")) { // update database movie table for NeoDB support
         $wpdb->query($update_table['neodb']);
+    }
+    
+    // Add source column to log table for existing installations
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_log}'") == $wpdb->douban_log) {
+        if (!$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_log} LIKE 'source'")) {
+            $wpdb->query($update_table['log_source']);
+        }
     }
 }
 

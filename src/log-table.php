@@ -84,12 +84,26 @@ class Log_Table extends \WP_List_Table
     {
         switch ($column_name) {
             case 'type':
-            case 'action':
             case 'status':
             case 'message':
             case 'create_time':
             case 'account_id':
                 return $item->$column_name;
+
+            case 'source':
+                $source_labels = [
+                    'douban' => '豆瓣',
+                    'tmdb' => 'TMDB',
+                    'neodb' => 'NeoDB',
+                ];
+                return $source_labels[$item->source] ?? '豆瓣';
+
+            case 'action':
+                $action_labels = [
+                    'sync' => '同步',
+                    'embed' => '嵌入',
+                ];
+                return $action_labels[$item->action] ?? $item->action;
 
             default:
                 return print_r($item, true);
@@ -138,6 +152,7 @@ class Log_Table extends \WP_List_Table
     {
         return array(
             'type'     => '类型',
+            'source' => '来源',
             'action' => '操作',
             'status' => '状态',
             'message' => '备注',
