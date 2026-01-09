@@ -65,7 +65,7 @@ class Subject_List_Table extends \WP_List_Table
         $filter = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? " AND f.type = '{$_GET['subject_type']}'" : '';
         $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
         $filter .= !empty($_GET['status']) ? " f.status = '{$_GET['status']}'" : "";
-        $subjects = $wpdb->get_results("SELECT m.*, f.create_time, f.remark, f.score , f.status FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE 1=1{$filter} ORDER BY f.create_time DESC LIMIT 40 OFFSET {$offset}");
+        $subjects = $wpdb->get_results("SELECT m.*, f.create_time, f.remark, f.score , f.status FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE f.id IS NOT NULL{$filter} ORDER BY f.create_time DESC LIMIT 40 OFFSET {$offset}");
 
         $this->items = $subjects;
 
@@ -88,6 +88,7 @@ class Subject_List_Table extends \WP_List_Table
             'music'   => '音乐',
             'game'   => '游戏',
             'drama'   => '舞台剧',
+            'podcast' => '播客',
         );
 
         /**
@@ -186,8 +187,11 @@ class Subject_List_Table extends \WP_List_Table
                 }
 
             case 'poster':
-                return '<img src="' . $this->wpd_save_images($item->douban_id, $item->poster, $item->tmdb_type ? 'tmdb' : '') . '" width="100" referrerpolicy="no-referrer">';
+                $cache_prefix = $item->neodb_id ? 'neodb_' : ($item->tmdb_type ? 'tmdb' : '');
+                $cache_id = $item->neodb_id ? $item->neodb_id : $item->douban_id;
+                return '<img src="' . $this->wpd_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
             case 'tmdb_type':
+                if ($item->neodb_id) return 'NeoDB';
                 return $item->$column_name ? 'TMDB' : '豆瓣';
             case 'name':
             case 'douban_score':

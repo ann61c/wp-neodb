@@ -22,6 +22,8 @@ class WPD_Douban
 
         wp_embed_register_handler('themoviedb', '#https?:\/\/www\.themoviedb\.org\/(\w+)\/(\d+)#i', [$this, 'wp_embed_handler_the_movie_db']);
 
+        wp_embed_register_handler('neodb', '#https?://neodb\.social/(book|movie|tv|album|game|podcast|performance)/([a-zA-Z0-9]+)/?#i', [$this, 'wp_embed_handler_neodb']);
+
         add_action('rest_api_init', [$this, 'wpd_register_rest_routes']);
         add_filter("plugin_action_links_{$plugin_file}", [$this, 'plugin_action_links'], 10, 4);
         add_shortcode('wpd', [$this, 'list_shortcode']);
@@ -331,6 +333,40 @@ class WPD_Douban
             }
         }
 
+        // Handle NeoDB items
+        if ($movie->neodb_id) {
+            $neodb_url = $this->db_get_setting('neodb_url') ? $this->db_get_setting('neodb_url') : 'https://neodb.social';
+            $api_url = rtrim($neodb_url, '/') . "/api/" . $movie->type . "/" . $movie->neodb_id;
+
+            $headers = [];
+            if ($this->db_get_setting('neodb_token')) {
+                $headers['Authorization'] = 'Bearer ' . $this->db_get_setting('neodb_token');
+            }
+
+            $response = wp_remote_get($api_url, ['headers' => $headers, 'sslverify' => false]);
+            if (is_wp_error($response)) {
+                return false;
+            }
+
+            $data = json_decode(wp_remote_retrieve_body($response), true);
+            if ($data) {
+                $description = $data['description'] ?? '';
+                if (mb_strlen($description, 'UTF-8') > 250) {
+                    $description = mb_substr($description, 0, 247, 'UTF-8') . '...';
+                }
+
+                $wpdb->update($wpdb->douban_movies, [
+                    'name' => $data['display_title'] ?? $data['title'],
+                    'poster' => $data['cover_image_url'] ?? '',
+                    'douban_score' => $data['rating'] ?? 0,
+                    'link' => $data['url'] ?? '',
+                    'card_subtitle' => $description,
+                ], ['id' => $movie->id]);
+                return true;
+            }
+            return false;
+        }
+
         if ($type == 'movie') {
             $link = $this->base_url . "movie/" . $movie->douban_id . "?ck=xgtY&for_mobile=1";
         } elseif ($type == 'book') {
@@ -416,15 +452,15 @@ class WPD_Douban
             if ($wpdb->insert_id) {
                 $movie_id = $wpdb->insert_id;
                 if ($data['genres']) foreach ($data['genres'] as $genre) {
-                    $wpdb->insert(
-                        $wpdb->douban_genres,
-                        [
-                            'movie_id' => $movie_id,
-                            'name' => $genre['name'],
-                            'type' => $type,
-                        ]
-                    );
-                }
+                        $wpdb->insert(
+                            $wpdb->douban_genres,
+                            [
+                                'movie_id' => $movie_id,
+                                'name' => $genre['name'],
+                                'type' => $type,
+                            ]
+                        );
+                    }
             }
             return (object) [
                 'id' => $movie_id,
@@ -505,15 +541,15 @@ class WPD_Douban
             if ($wpdb->insert_id) {
                 $movie_id = $wpdb->insert_id;
                 if ($data['genres']) foreach ($data['genres'] as $genre) {
-                    $wpdb->insert(
-                        $wpdb->douban_genres,
-                        [
-                            'movie_id' => $movie_id,
-                            'name' => $genre,
-                            'type' => $type,
-                        ]
-                    );
-                }
+                        $wpdb->insert(
+                            $wpdb->douban_genres,
+                            [
+                                'movie_id' => $movie_id,
+                                'name' => $genre,
+                                'type' => $type,
+                            ]
+                        );
+                    }
             }
             return (object) [
                 'id' => $movie_id,
@@ -534,6 +570,155 @@ class WPD_Douban
         } else {
             return false;
         }
+    }
+
+    public function fetch_neodb_subject($uuid, $neodb_type)
+    {
+        global $wpdb;
+
+        // Check if item already exists in database
+        $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `neodb_id` = '{$uuid}'");
+        if ($movie) {
+            $movie->genres = [];
+            $genres = $wpdb->get_results("SELECT * FROM $wpdb->douban_genres WHERE `movie_id` = {$movie->id}");
+            if (!empty($genres)) {
+                foreach ($genres as $genre) {
+                    $movie->genres[] = $genre->name;
+                }
+            }
+            $fav = $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE `subject_id` = '{$movie->id}'");
+            if ($fav) {
+                $movie->fav_time = $fav->create_time;
+                $movie->score = $fav->score;
+                $movie->remark = $fav->remark;
+            } else {
+                $movie->fav_time = "";
+                $movie->score = "";
+                $movie->remark = "";
+            }
+            return $movie;
+        }
+
+        // Fetch from NeoDB API
+        $neodb_url = $this->db_get_setting('neodb_url') ? $this->db_get_setting('neodb_url') : 'https://neodb.social';
+        $api_url = rtrim($neodb_url, '/') . "/api/{$neodb_type}/{$uuid}";
+
+        $headers = [];
+        if ($this->db_get_setting('neodb_token')) {
+            $headers['Authorization'] = 'Bearer ' . $this->db_get_setting('neodb_token');
+        }
+
+        $response = wp_remote_get($api_url, ['headers' => $headers, 'sslverify' => false]);
+        if (is_wp_error($response)) {
+            return false;
+        }
+
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+        if (!$data) {
+            return false;
+        }
+
+        // Map NeoDB type to WP-Douban type
+        $type_map = [
+            'book' => 'book',
+            'movie' => 'movie',
+            'tv' => 'movie',  // TV shows stored as movie
+            'album' => 'music',
+            'game' => 'game',
+            'podcast' => 'podcast',
+            'performance' => 'drama'
+        ];
+        $type = isset($type_map[$neodb_type]) ? $type_map[$neodb_type] : 'movie';
+
+        // Truncate description to prevent insert failure (varchar 256 limit)
+        $description = $data['description'] ?? '';
+        if (mb_strlen($description, 'UTF-8') > 250) {
+            $description = mb_substr($description, 0, 247, 'UTF-8') . '...';
+        }
+
+        // Prepare data for insertion
+        $insert_data = [
+            'name' => $data['display_title'] ?? $data['title'],
+            'poster' => $data['cover_image_url'] ?? '',
+            'douban_id' => 0,  // Set to 0 for NeoDB items (non-Douban source)
+            'douban_score' => $data['rating'] ?? 0,
+            'link' => $data['url'] ?? '',
+            'type' => $type,
+            'card_subtitle' => $description,
+            'neodb_id' => $uuid
+        ];
+
+        // Extract year from different possible fields
+        if (isset($data['pub_year'])) {
+            $insert_data['year'] = $data['pub_year'];
+        } elseif (isset($data['year'])) {
+            $insert_data['year'] = $data['year'];
+        } elseif (isset($data['release_date'])) {
+            $insert_data['year'] = substr($data['release_date'], 0, 4);
+            $insert_data['pubdate'] = $data['release_date'];
+        }
+
+        // Insert into database
+        $wpdb->insert($wpdb->douban_movies, $insert_data);
+        $movie_id = $wpdb->insert_id;
+
+        // Insert genres if available
+        if ($movie_id && isset($data['genre']) && is_array($data['genre'])) {
+            foreach ($data['genre'] as $genre) {
+                $wpdb->insert(
+                    $wpdb->douban_genres,
+                    [
+                        'movie_id' => $movie_id,
+                        'name' => $genre,
+                        'type' => $type,
+                    ]
+                );
+            }
+        }
+
+        // Return formatted object
+        return (object) array_merge($insert_data, [
+            'id' => $movie_id,
+            'genres' => $data['genre'] ?? [],
+            'fav_time' => '',
+            'remark' => '',
+            'score' => ''
+        ]);
+    }
+
+    function wp_embed_handler_neodb($matches, $attr, $url, $rawattr)
+    {
+        if ((!is_singular() && !$this->db_get_setting('home_render')))
+            return $url;
+
+        $neodb_type = $matches[1];  // book, movie, tv, album, etc
+        $uuid = $matches[2];         // UUID
+
+        $html = $this->get_neodb_subject_detail($uuid, $neodb_type);
+        return apply_filters('embed_neodb', $html, $matches, $attr, $url, $rawattr);
+    }
+
+    public function get_neodb_subject_detail($uuid, $neodb_type)
+    {
+        $data = $this->fetch_neodb_subject($uuid, $neodb_type);
+        if (!$data)
+            return '';
+
+        $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($uuid, $data->poster, 'neodb_') : $data->poster;
+
+        $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' . $cover . '"></div>';
+
+        if ($this->db_get_setting("show_remark") && $data->fav_time) {
+            $output .= '<div class="db--viewTime JiEun">Marked ' . $data->fav_time . '</div>';
+        }
+
+        $output .= '<div class="doulist-content"><div class="doulist-title"><a href="' . $data->link . '" class="cute" target="_blank" rel="external nofollow">' . $data->name . '</a></div>';
+        $output .= '<div class="rating"><span class="allstardark"><span class="allstarlight" style="width:' . $data->douban_score * 10 . '%"></span></span><span class="rating_nums"> ' . $data->douban_score . ' </span></div>';
+        $output .= '<div class="abstract">';
+        $output .= $this->db_get_setting("show_remark") && $data->remark ? $data->remark : $data->card_subtitle;
+        $output .= '</div></div></div></div>';
+
+        return $output;
     }
 
     private function wpd_save_images($id, $url, $type = "")

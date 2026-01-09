@@ -31,15 +31,25 @@
                                     'title' => 'TMDB API Key',
                                     'key' => 'api_key',
                                     'default' => ''
+                                ),
+                                array(
+                                    'title' => 'NeoDB 实例地址',
+                                    'key' => 'neodb_url',
+                                    'default' => 'https://neodb.social'
+                                ),
+                                array(
+                                    'title' => 'NeoDB Token (可选)',
+                                    'key' => 'neodb_token',
+                                    'default' => ''
                                 )
                             );
                             foreach ($color as $key => $V) {
-                            ?>
-                                <li class="wpd-color-li">
-                                    <code><?php echo $V['title']; ?></code>
-                                    <?php $color = db_get_setting($V['key']) ? db_get_setting($V['key']) : $V['default']; ?>
+                                ?>
+                            <li class="wpd-color-li">
+                                <code><?php echo $V['title']; ?></code>
+                                <?php $color = db_get_setting($V['key']) ? db_get_setting($V['key']) : $V['default']; ?>
                                     <input name="<?php echo db_setting_key($V['key']); ?>" type="text" value="<?php echo $color; ?>" class="regular-text wpd-color-picker" />
-                                </li>
+                            </li>
                             <?php }
                             ?>
                         </ul>
@@ -50,7 +60,7 @@
                 <tr valign="top">
                     <th scope="row">
                         <label for="<?php echo db_setting_key('dark_mode');
-                                    $mode = db_get_setting("dark_mode") ? db_get_setting("dark_mode") : 'light'; ?>">暗黑模式</label>
+                            $mode = db_get_setting("dark_mode") ? db_get_setting("dark_mode") : 'light'; ?>">暗黑模式</label>
                     </th>
                     <td>
                         <label for="mode-light">
@@ -138,20 +148,20 @@
         </div>
     </form>
     <style>
-        .wpd-color-li {
-            position: relative;
-            padding-left: 120px;
-        }
+    .wpd-color-li {
+        position: relative;
+        padding-left: 160px;
+    }
 
-        .wpd-color-li code {
-            position: absolute;
-            left: 0;
-            top: 1px;
-        }
+    .wpd-color-li code {
+        position: absolute;
+        left: 0;
+        top: 1px;
+    }
 
-        .wpd-textarea {
-            width: 600px;
-            height: 120px;
-        }
+    .wpd-textarea {
+        width: 600px;
+        height: 120px;
+    }
     </style>
 </div>

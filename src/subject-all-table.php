@@ -87,6 +87,7 @@ class Subject_ALL_Table extends \WP_List_Table
             'music'   => '音乐',
             'game'   => '游戏',
             'drama'   => '舞台剧',
+            'podcast' => '播客',
         );
 
         /**
@@ -184,9 +185,12 @@ class Subject_ALL_Table extends \WP_List_Table
                 return $item->$column_name;
 
             case 'poster':
-                return '<img src="' . $this->wpd_save_images($item->douban_id, $item->poster, $item->tmdb_type ? 'tmdb' : '') . '" width="100" referrerpolicy="no-referrer">';
+                $cache_prefix = $item->neodb_id ? 'neodb_' : ($item->tmdb_type ? 'tmdb' : '');
+                $cache_id = $item->neodb_id ? $item->neodb_id : $item->douban_id;
+                return '<img src="' . $this->wpd_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
 
             case 'tmdb_type':
+                if ($item->neodb_id) return 'NeoDB';
                 return $item->$column_name ? 'TMDB' : '豆瓣';
 
             default:

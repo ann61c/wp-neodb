@@ -12,14 +12,14 @@
                 <tr valign="top">
                     <th scope="row"><label for="url">条目</label></th>
                     <td>
-                        <p><img src="<?php
-                                        $type = $subject->tmdb_id ? 'tmdb' : '';
-                                        $id = $subject->tmdb_id ? $subject->tmdb_id : $subject->douban_id;
-                                        $e = ABSPATH . 'douban_cache/' . $type . $id . '.jpg';
-                                        echo (is_file($e) ? home_url('/') . 'douban_cache/' . $type . $id . '.jpg' : $subject->poster); ?>" width="100" /></p>
+                    <p><img src="<?php
+                                    $type = $subject->neodb_id ? 'neodb_' : ($subject->tmdb_id ? 'tmdb' : '');
+                                    $id = $subject->neodb_id ? $subject->neodb_id : ($subject->tmdb_id ? $subject->tmdb_id : $subject->douban_id);
+                                    $e = ABSPATH . 'douban_cache/' . $type . $id . '.jpg';
+                                    echo (is_file($e) ? home_url('/') . 'douban_cache/' . $type . $id . '.jpg' : $subject->poster); ?>" width="100" /></p>
                         <p><?php echo (is_file($e) ? '封面已缓存' : '因豆瓣原因，原始封面可能无法显示。'); ?></p>
                         <p><?php echo $subject->name; ?>
-                            <span class="db--titletag"><?php echo ($subject->tmdb_id ? 'TMDB' : '豆瓣'); ?></span>
+                            <span class="db--titletag"><?php echo ($subject->neodb_id ? 'NeoDB' : ($subject->tmdb_id ? 'TMDB' : '豆瓣')); ?></span>
                         </p>
                         <p><?php echo $subject->card_subtitle; ?></p>
                     </td>

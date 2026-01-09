@@ -143,6 +143,7 @@ function wpd_install()
         ") $charset_collate;";
 
     $update_table['douban_movies'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `tmdb_id` int(10) AFTER `douban_id`, ADD COLUMN `tmdb_type` varchar(16) AFTER `tmdb_id`;";
+    $update_table['neodb'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `neodb_id` varchar(64) AFTER `tmdb_type`;";
 
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_collection}'") != $wpdb->douban_collection) dbDelta($create_table['douban_collection']);
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_faves}'") != $wpdb->douban_faves) dbDelta($create_table['douban_faves']);
@@ -153,6 +154,8 @@ function wpd_install()
         dbDelta($create_table['douban_movies']);
     } elseif (!$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_movies} LIKE 'tmdb_id'")) { // update database movie table since 4.4.0
         $wpdb->query($update_table['douban_movies']);
+    } elseif (!$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_movies} LIKE 'neodb_id'")) { // update database movie table for NeoDB support
+        $wpdb->query($update_table['neodb']);
     }
 }
 
