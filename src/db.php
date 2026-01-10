@@ -128,11 +128,16 @@ class db_sync extends WPD_Douban
                         }
 
                         if (!$movie) {
+                            // Extract external IDs (Douban ID, TMDB ID)
+                            $external_ids = $this->extract_external_ids_from_neodb($item);
+                            
                             // Insert new item
                             $wpdb->insert($wpdb->douban_movies, [
                                 'name' => $item['display_title'] ?? $item['title'],
                                 'poster' => $item['cover_image_url'] ?? '',
-                                'douban_id' => 0,
+                                'douban_id' => $external_ids['douban_id'],
+                                'tmdb_id' => $external_ids['tmdb_id'],
+                                'tmdb_type' => $external_ids['tmdb_type'],
                                 'douban_score' => $item['rating'] ?? 0,
                                 'link' => $item['url'] ?? '',
                                 'year' => $item['year'] ?? '',
