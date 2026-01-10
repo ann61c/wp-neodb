@@ -96,7 +96,7 @@
                     <tr valign="top">
                         <th scope="row"><label for="url">副标题</label></th>
                         <td>
-                            <input type="text" name="card_subtitle" value="<?php echo $subject->card_subtitle ?>" class="regular-text">
+                            <textarea name="card_subtitle" style="width: 600px;" rows="5" cols="30"><?php echo $subject->card_subtitle ?></textarea>
                             <button type="button" class="button revert-btn" data-field="card_subtitle" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
@@ -111,7 +111,7 @@
                     <tr valign="top">
                         <th scope="row"><label for="url">观看时间</label></th>
                         <td>
-                            <input type="datetime" name="create_time" value="<?php echo $fave->create_time ?>" class="regular-text"></input>
+                            <input type="datetime-local" name="create_time" step="1" value="<?php echo get_date_from_gmt($fave->create_time, 'Y-m-d\TH:i:s'); ?>" class="regular-text"></input>
                             <button type="button" class="button revert-btn" data-field="create_time" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
