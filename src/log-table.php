@@ -96,9 +96,10 @@ class Log_Table extends \WP_List_Table
                 return $type_labels[$item->type] ?? $item->type;
             case 'status':
             case 'message':
-            case 'create_time':
             case 'account_id':
                 return $item->$column_name;
+            case 'create_time':
+                return wp_date(get_option('date_format') . ' ' . get_option('time_format'), strtotime($item->create_time));
 
             case 'source':
                 $source_labels = [

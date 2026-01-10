@@ -34,12 +34,12 @@ class WPD_ADMIN extends WPD_Douban
 
         if (isset($_GET['wpd_action'])  && 'mark' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
             global $wpdb;
-            $wpdb->insert(
+                $wpdb->insert(
                 $wpdb->douban_faves,
                 [
                     'subject_id' => $_GET['subject_id'],
                     'type' => $_GET['subject_type'],
-                    'create_time' => current_time('mysql'),
+                    'create_time' => current_time('mysql', 1),
                     'status' => 'done'
                 ]
             );
@@ -71,7 +71,7 @@ class WPD_ADMIN extends WPD_Douban
                     [
                         'remark' => $_POST['remark'],
                         'score' => $_POST['score'],
-                        'create_time' => $_POST['create_time'],
+                        'create_time' => get_gmt_from_date($_POST['create_time']),
                         'status' => $_POST['status'],
                     ],
                     [

@@ -174,7 +174,7 @@ class db_sync extends WPD_Douban
                             if (!$fav) {
                                 // Insert new fave
                                 $wpdb->insert($wpdb->douban_faves, [
-                                    'create_time' => $mark['created_time'] ?? date('Y-m-d H:i:s'),
+                                    'create_time' => isset($mark['created_time']) ? get_gmt_from_date($mark['created_time']) : current_time('mysql', 1),
                                     'remark' => $mark['comment_text'] ?? '',
                                     'score' => $mark['rating_grade'] ?? '',
                                     'subject_id' => $movie_id,
@@ -288,7 +288,7 @@ class db_sync extends WPD_Douban
                                     $wpdb->insert(
                                         $wpdb->douban_faves,
                                         [
-                                            'create_time' => $interest['create_time'],
+                                            'create_time' => get_gmt_from_date($interest['create_time']),
                                             'remark' => $interest['comment'],
                                             'score' => $interest['rating'] ? $interest['rating']['value'] : '',
                                             'subject_id' => $movie_id,

@@ -1083,8 +1083,11 @@ class WPD_Douban
                                 if ($data) {
                                     $status_map = ['complete' => 'done', 'progress' => 'doing', 'wishlist' => 'mark', 'dropped' => 'dropped'];
                                     
+                                    // Convert UTC from API to site local time for the datetime-local input
+                                    $created_time = isset($data['created_time']) ? get_date_from_gmt($data['created_time'], 'Y-m-d\TH:i:s') : '';
+                                    
                                     $fresh_data = (object) [
-                                        'create_time' => isset($data['created_time']) ? date('Y-m-d H:i:s', strtotime($data['created_time'])) : '',
+                                        'create_time' => $created_time,
                                         'status' => $status_map[$data['shelf_type']] ?? 'done',
                                         'remark' => $data['comment_text'] ?? '',
                                         'score' => $data['rating_grade'] ?? ''
