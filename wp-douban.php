@@ -65,10 +65,10 @@ function wpd_install()
     $thumb_path = ABSPATH . "douban_cache/";
     if (file_exists($thumb_path)) {
         if (!is_writeable($thumb_path)) {
-            @chmod($thumb_path, '511');
+            @chmod($thumb_path, 0755);
         }
     } else {
-        @mkdir($thumb_path, '511', true);
+        @mkdir($thumb_path, 0755, true);
     }
 
     // Create DB Tables (5 Tables)
