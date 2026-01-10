@@ -5,7 +5,7 @@
  */
 class WPD_Douban
 {
-    const VERSION = '4.4.2';
+    const VERSION = '4.4.5';
     private $base_url = 'https://fatesinger.com/dbapi/';
     private $perpage = 70;
     private $uid;
@@ -197,6 +197,15 @@ class WPD_Douban
             'callback' => [$this, 'get_genres'],
             'permission_callback' => '__return_true',
         ));
+
+        // AJAX data preview endpoint
+        register_rest_route('wpd/v1', '/preview-source', array(
+            'methods' => 'POST',
+            'callback' => [$this, 'preview_source_data'],
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
     }
 
     public function get_genres($data)
@@ -241,25 +250,8 @@ class WPD_Douban
 
         $data = [];
         foreach ($goods as $good) {
-            if ($this->db_get_setting('download_image')) {
-                $cache_id = $good->douban_id;
-                $cache_prefix = '';
-                if (!empty($good->neodb_id)) {
-                    $cache_id = $good->neodb_id;
-                    $cache_prefix = 'neodb_';
-                } elseif (!empty($good->tmdb_id)) {
-                    $cache_id = $good->tmdb_id;
-                    $cache_prefix = 'tmdb';
-                }
-                $good->poster = $this->wpd_save_images($cache_id, $good->poster, $cache_prefix);
-            } else if (in_array($good->type, ['movie', 'book', 'music'])) {
-                $good->poster = "https://dou.img.lithub.cc/" . $type . "/" . $good->douban_id . ".jpg";
-            }
+            $good = $this->populate_db_movie_metadata($good);
             $good->create_time = date('Y-m-d', strtotime($good->create_time));
-            if ($top250 && ($good->type == 'movie' || $good->type == 'book') && $this->db_get_setting('top250')) {
-                $re = $wpdb->get_results("SELECT * FROM $wpdb->douban_relation WHERE `collection_id` = {$top250->id} AND  `movie_id` = {$good->id}");
-                $good->is_top250 = !empty($re);
-            }
             $data[] = $good;
         }
         return new WP_REST_Response($data);
@@ -267,12 +259,11 @@ class WPD_Douban
 
     function wp_embed_handler_the_movie_db($matches, $attr, $url, $rawattr)
     {
-
         if ((!is_singular() && !$this->db_get_setting('home_render')) || !$this->db_get_setting('api_key')) return $url;
         $type = $matches[1];
         $id = $matches[2];
         if (!in_array($type, ['tv', 'movie'])) return $url;
-        $html = $this->get_the_movie_db_detail($id, $type);
+        $html = $this->get_the_movie_db_detail($id, $type, $url);  // Pass original URL
         return apply_filters('embed_forbes', $html, $matches, $attr, $url, $rawattr);
     }
 
@@ -302,20 +293,36 @@ class WPD_Douban
         $type = $matches[1];
         if (!in_array($type, ['movie', 'book', 'music'])) return $url;
         $id = $matches[2];
-        $html = $this->get_subject_detail($id, $type);
+        $html = $this->get_subject_detail($id, $type, $url);  // Pass original URL
         return apply_filters('embed_forbes', $html, $matches, $attr, $url, $rawattr);
     }
 
-    public function get_the_movie_db_detail($id, $type)
+    public function get_the_movie_db_detail($id, $type, $embed_url = null)
     {
         $type = $type ? $type : 'movie';
         $data = $this->fetch_tmdb_subject($id, $type);
         if (!$data) return;
+        
+        // Override link with embed URL if provided
+        if ($embed_url) {
+            $data->link = $embed_url;
+        }
+        
         $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($id, $data->poster, 'tmdb') : $data->poster;
         $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' .  $cover . '"></div>';
-        if (db_get_setting("show_remark") && $data->fav_time) {
-            $output .= '<div class="db--viewTime JiEun">Marked ' . $data->fav_time . '</div>';
+        
+        $meta_items = [];
+        if (!empty($data->is_top250)) {
+            $meta_items[] = 'Top 250';
         }
+        if (db_get_setting("show_remark") && $data->fav_time) {
+            $meta_items[] = 'Marked ' . date('Y-m-d', strtotime($data->fav_time));
+        }
+        
+        if (!empty($meta_items)) {
+            $output .= '<div class="db--viewTime JiEun">' . implode(' · ', $meta_items) . '</div>';
+        }
+
         $output .= '<div class="doulist-content"><div class="doulist-title"><a href="' . ($data->link ? $data->link : "https://www.themoviedb.org/" . $type . "/" . $id) . '" class="cute" target="_blank" rel="external nofollow">' . $data->name . '</a></div>';
         $output .= '<div class="rating"><span class="allstardark"><span class="allstarlight" style="width:' . $data->douban_score * 10 . '%"></span></span><span class="rating_nums"> ' . $data->douban_score . ' </span></div>';
         $output .= '<div class="abstract">';
@@ -324,16 +331,32 @@ class WPD_Douban
         return $output;
     }
 
-    public function get_subject_detail($id, $type)
+    public function get_subject_detail($id, $type, $embed_url = null)
     {
         $type = $type ? $type : 'movie';
         $data = $this->fetch_subject($id, $type);
         if (!$data) return;
-        $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($id, $data->poster) : (in_array($data->type, ['movie', 'book', 'music']) ? "https://dou.img.lithub.cc/" . $type . "/" . $data->douban_id . ".jpg" : $data->poster);
-        $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' .  $cover . '"></div>';
-        if ($this->db_get_setting("show_remark") && $data->fav_time) {
-            $output .= '<div class="db--viewTime JiEun">Marked ' . $data->fav_time . '</div>';
+        
+        // Override link with embed URL if provided
+        if ($embed_url) {
+            $data->link = $embed_url;
         }
+        
+        $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($id, $data->poster, 'douban') : (in_array($data->type, ['movie', 'book', 'music']) ? "https://dou.img.lithub.cc/" . $type . "/" . $data->douban_id . ".jpg" : $data->poster);
+        $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' .  $cover . '"></div>';
+        
+        $meta_items = [];
+        if (!empty($data->is_top250)) {
+            $meta_items[] = 'Top 250';
+        }
+        if ($this->db_get_setting("show_remark") && $data->fav_time) {
+            $meta_items[] = 'Marked ' . date('Y-m-d', strtotime($data->fav_time));
+        }
+        
+        if (!empty($meta_items)) {
+            $output .= '<div class="db--viewTime JiEun">' . implode(' · ', $meta_items) . '</div>';
+        }
+
         $output .= '<div class="doulist-content"><div class="doulist-title"><a href="' . $data->link . '" class="cute" target="_blank" rel="external nofollow">' . $data->name . '</a></div>';
         $output .= '<div class="rating"><span class="allstardark"><span class="allstarlight" style="width:' . $data->douban_score * 10 . '%"></span></span><span class="rating_nums"> ' . $data->douban_score . ' </span></div>';
         $output .= '<div class="abstract">';
@@ -351,28 +374,8 @@ class WPD_Douban
             return false;
         }
 
-        if ($movie->tmdb_id) {
-            $response = wp_remote_get("https://api.themoviedb.org/3/" . $movie->tmdb_type . "/" . $movie->tmdb_id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
-            if (is_wp_error($response)) {
-                return false;
-            }
-
-            $data = json_decode(wp_remote_retrieve_body($response), true);
-            if ($data) {
-                $wpdb->update($wpdb->douban_movies, [
-                    'name' => isset($data['title']) ? $data['title'] : $data['name'],
-                    'poster' => "https://image.tmdb.org/t/p/original" . $data['poster_path'],
-                    'douban_id' => $data['id'],
-                    'douban_score' => $data['vote_average'],
-                    'link' => $data['homepage'],
-                    'year' => '',
-                    'type' => 'movie',
-                    'pubdate' => isset($data['release_date']) ? $data['release_date'] : $data['first_air_date'],
-                    'card_subtitle' => $data['overview'],
-                ], ['id' => $movie->id]);
-                return true;
-            }
-        }
+        // NOTE: Check NeoDB BEFORE TMDB because NeoDB items may have extracted TMDB IDs
+        // We want to sync from NeoDB API, not TMDB API, for NeoDB items
 
         // Handle NeoDB items
         if ($movie->neodb_id) {
@@ -386,23 +389,70 @@ class WPD_Douban
 
             $response = wp_remote_get($api_url, ['headers' => $headers, 'sslverify' => false]);
             if (is_wp_error($response)) {
+                $error_message = $response->get_error_message();
+                $this->add_log($movie->type, 'sync', 'neodb', "API Error: {$error_message}");
                 return false;
             }
 
             $data = json_decode(wp_remote_retrieve_body($response), true);
+            
+            // Debug logging
+            $this->add_log($movie->type, 'sync', 'neodb', "API Response received for {$movie->neodb_id}");
+            
+            if (!$data || !is_array($data)) {
+                $this->add_log($movie->type, 'sync', 'neodb', "Empty/Invalid API response");
+                return false;
+            }
+            
             if ($data) {
                 $description = $data['description'] ?? '';
                 if (mb_strlen($description, 'UTF-8') > 250) {
                     $description = mb_substr($description, 0, 247, 'UTF-8') . '...';
                 }
 
-                $wpdb->update($wpdb->douban_movies, [
-                    'name' => $data['display_title'] ?? $data['title'],
-                    'poster' => $data['cover_image_url'] ?? '',
+                // Extract external IDs (Douban ID, TMDB ID)
+                $external_ids = $this->extract_external_ids_from_neodb($data);
+
+                // Build update data - only include non-empty values to avoid overwriting existing data
+                $update_data = [
                     'douban_score' => $data['rating'] ?? 0,
-                    'link' => $data['url'] ?? '',
-                    'card_subtitle' => $description,
-                ], ['id' => $movie->id]);
+                ];
+
+                // Only update if we have a title
+                if (!empty($data['display_title']) || !empty($data['title'])) {
+                    $update_data['name'] = $data['display_title'] ?? $data['title'];
+                }
+
+                // Only update poster if we have a URL
+                if (!empty($data['cover_image_url'])) {
+                    $update_data['poster'] = $data['cover_image_url'];
+                }
+
+                // Only update link if we have a URL
+                if (!empty($data['url'])) {
+                    $update_data['link'] = $data['url'];
+                }
+
+                // Only update description if not empty
+                if (!empty($description)) {
+                    $update_data['card_subtitle'] = $description;
+                }
+
+                // Only update external IDs if we found them (don't overwrite with 0)
+                if ($external_ids['douban_id'] > 0) {
+                    $update_data['douban_id'] = $external_ids['douban_id'];
+                }
+
+                if ($external_ids['tmdb_id'] > 0) {
+                    $update_data['tmdb_id'] = $external_ids['tmdb_id'];
+                    $update_data['tmdb_type'] = $external_ids['tmdb_type'];
+                }
+
+                $wpdb->update($wpdb->douban_movies, $update_data, ['id' => $movie->id]);
+                
+                // Log what was updated
+                $fields_updated = array_keys($update_data);
+                $this->add_log($movie->type, 'sync', 'neodb', "Updated fields: " . implode(', ', $fields_updated));
 
                 // Update genres
                 if (isset($data['genre']) && is_array($data['genre'])) {
@@ -424,9 +474,34 @@ class WPD_Douban
                 $item_name = $data['display_title'] ?? $data['title'];
                 $this->add_log($movie->type, 'sync', 'neodb', "synced {$item_name}");
 
+
                 return true;
             }
             return false;
+        }
+
+        // Handle TMDB items (only if NOT a NeoDB item - checked above)
+        if ($movie->tmdb_id) {
+            $response = wp_remote_get("https://api.themoviedb.org/3/" . $movie->tmdb_type . "/" . $movie->tmdb_id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
+            if (is_wp_error($response)) {
+                return false;
+            }
+
+            $data = json_decode(wp_remote_retrieve_body($response), true);
+            if ($data) {
+                $wpdb->update($wpdb->douban_movies, [
+                    'name' => isset($data['title']) ? $data['title'] : $data['name'],
+                   'poster' => "https://image.tmdb.org/t/p/original" . $data['poster_path'],
+                    'tmdb_id' => $data['id'],  // FIXED: was incorrectly writing to douban_id
+                    'douban_score' => $data['vote_average'],
+                    'link' => $data['homepage'],
+                    'year' => '',
+                    'type' => 'movie',
+                    'pubdate' => isset($data['release_date']) ? $data['release_date'] : $data['first_air_date'],
+                    'card_subtitle' => $data['overview'],
+                ], ['id' => $movie->id]);
+                return true;
+            }
         }
 
         if ($type == 'movie') {
@@ -471,24 +546,7 @@ class WPD_Douban
         global $wpdb;
         $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `tmdb_type` = '{$type}' AND tmdb_id = '{$id}'");
         if ($movie) {
-            $movie->genres = [];
-            $genres = $wpdb->get_results("SELECT * FROM $wpdb->douban_genres WHERE `type` = '{$type}' AND `movie_id` = {$movie->id}");
-            if (!empty($genres)) {
-                foreach ($genres as $genre) {
-                    $movie->genres[] = $genre->name;
-                }
-            }
-            $fav = $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE `type` = '{$type}' AND `subject_id` = '{$movie->id}'");
-            if ($fav) {
-                $movie->fav_time = $fav->create_time;
-                $movie->score = $fav->score;
-                $movie->remark = $fav->remark;
-            } else {
-                $movie->fav_time = "";
-                $movie->score = "";
-                $movie->remark = "";
-            }
-            return $movie;
+            return $this->populate_db_movie_metadata($movie);
         }
 
         $response = wp_remote_get("https://api.themoviedb.org/3/" . $type . "/" . $id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
@@ -497,10 +555,18 @@ class WPD_Douban
         }
         $data = json_decode(wp_remote_retrieve_body($response), true);
         if ($data) {
-            $wpdb->insert($wpdb->douban_movies, [
+            // Use universal deduplication helper
+            $existing_movie = $this->find_existing_movie(
+                'movie',  // TMDB is always movie type in our system
+                0,  // No douban_id from TMDB
+                $data['id'],  // tmdb_id
+                $type,  // tmdb_type
+                ''  // No neodb_id
+            );
+
+            $insert_data = [
                 'name' => isset($data['title']) ? $data['title'] : $data['name'],
                 'poster' => "https://image.tmdb.org/t/p/original" . $data['poster_path'],
-                'douban_id' => $data['id'],
                 'douban_score' => $data['vote_average'],
                 'link' => $data['homepage'],
                 'year' => '',
@@ -508,16 +574,37 @@ class WPD_Douban
                 'pubdate' => isset($data['release_date']) ? $data['release_date'] : $data['first_air_date'],
                 'card_subtitle' => $data['overview'],
                 'tmdb_type' => $type,
-                'tmdb_id' => $data['id']
-            ]);
-            $movie_id = '';
-            if ($wpdb->insert_id) {
-                $movie_id = $wpdb->insert_id;
-                $title = isset($data['title']) ? $data['title'] : $data['name'];
-                $this->add_log($type, 'embed', 'tmdb', $title);
-                if ($data['genres']) foreach ($data['genres'] as $genre) {
-                        $wpdb->insert(
-                            $wpdb->douban_genres,
+                'tmdb_id' => $data['id']  // FIXED: was incorrectly 'douban_id' => $data['id']
+            ];
+
+            if ($existing_movie) {
+                // Smart merge: only update empty fields
+                $update_data = $this->smart_merge_movie_data($existing_movie, $insert_data);
+                if (!empty($update_data)) {
+                    $wpdb->update(
+                        $wpdb->douban_movies,
+                        $update_data,
+                        ['id' => $existing_movie->id]
+                    );
+                }
+                $movie_id = $existing_movie->id;
+                $this->add_log($type, 'embed', 'tmdb', "merged with existing movie ID {$existing_movie->id}");
+            } else {
+                // Insert new entry
+                $wpdb->insert($wpdb->douban_movies, $insert_data);
+                $movie_id = '';
+                if ($wpdb->insert_id) {
+                    $movie_id = $wpdb->insert_id;
+                    $title = isset($data['title']) ? $data['title'] : $data['name'];
+                    $this->add_log($type, 'embed', 'tmdb', $title);
+                }
+            }
+
+            // Insert genres
+            if ($movie_id && $data['genres']) {
+                foreach ($data['genres'] as $genre) {
+                    $wpdb->insert(
+                        $wpdb->douban_genres,
                             [
                                 'movie_id' => $movie_id,
                                 'name' => $genre['name'],
@@ -553,24 +640,7 @@ class WPD_Douban
         global $wpdb;
         $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `type` = '{$type}' AND douban_id = '{$id}'");
         if ($movie) {
-            $movie->genres = [];
-            $genres = $wpdb->get_results("SELECT * FROM $wpdb->douban_genres WHERE `type` = '{$type}' AND `movie_id` = {$movie->id}");
-            if (!empty($genres)) {
-                foreach ($genres as $genre) {
-                    $movie->genres[] = $genre->name;
-                }
-            }
-            $fav = $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE `type` = '{$type}' AND `subject_id` = '{$movie->id}'");
-            if ($fav) {
-                $movie->fav_time = $fav->create_time;
-                $movie->score = $fav->score;
-                $movie->remark = $fav->remark;
-            } else {
-                $movie->fav_time = "";
-                $movie->score = "";
-                $movie->remark = "";
-            }
-            return $movie;
+            return $this->populate_db_movie_metadata($movie);
         }
 
         if ($type == 'movie') {
@@ -590,7 +660,16 @@ class WPD_Douban
         }
         $data = json_decode(wp_remote_retrieve_body($response), true);
         if ($data) {
-            $wpdb->insert($wpdb->douban_movies, [
+            // Use universal deduplication helper
+            $existing_movie = $this->find_existing_movie(
+                $type,
+                $data['id'],  // douban_id
+                0,  // No TMDB ID from Douban
+                null,
+                ''  // No NeoDB ID
+            );
+
+            $insert_data = [
                 'name' => $data['title'],
                 'poster' => $data['pic']['large'],
                 'douban_id' => $data['id'],
@@ -600,14 +679,35 @@ class WPD_Douban
                 'type' => $type,
                 'pubdate' => isset($data['pubdate']) ? $data['pubdate'][0] : '',
                 'card_subtitle' => $data['card_subtitle']
-            ]);
-            $movie_id = '';
-            if ($wpdb->insert_id) {
-                $movie_id = $wpdb->insert_id;
-                $this->add_log($type, 'embed', 'douban', $data['title']);
-                if ($data['genres']) foreach ($data['genres'] as $genre) {
-                        $wpdb->insert(
-                            $wpdb->douban_genres,
+            ];
+
+            if ($existing_movie) {
+                // Smart merge: only update empty fields
+                $update_data = $this->smart_merge_movie_data($existing_movie, $insert_data);
+                if (!empty($update_data)) {
+                    $wpdb->update(
+                        $wpdb->douban_movies,
+                        $update_data,
+                        ['id' => $existing_movie->id]
+                    );
+                }
+                $movie_id = $existing_movie->id;
+                $this->add_log($type, 'embed', 'douban', "merged with existing movie ID {$existing_movie->id}");
+            } else {
+                // Insert new entry
+                $wpdb->insert($wpdb->douban_movies, $insert_data);
+                $movie_id = '';
+                if ($wpdb->insert_id) {
+                    $movie_id = $wpdb->insert_id;
+                    $this->add_log($type, 'embed', 'douban', $data['title']);
+                }
+            }
+
+            // Insert genres
+            if ($movie_id && $data['genres']) {
+                foreach ($data['genres'] as $genre) {
+                    $wpdb->insert(
+                        $wpdb->douban_genres,
                             [
                                 'movie_id' => $movie_id,
                                 'name' => $genre,
@@ -641,27 +741,10 @@ class WPD_Douban
     {
         global $wpdb;
 
-        // Check if item already exists in database
+        // Check if item already exists by neodb_id
         $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `neodb_id` = '{$uuid}'");
         if ($movie) {
-            $movie->genres = [];
-            $genres = $wpdb->get_results("SELECT * FROM $wpdb->douban_genres WHERE `movie_id` = {$movie->id}");
-            if (!empty($genres)) {
-                foreach ($genres as $genre) {
-                    $movie->genres[] = $genre->name;
-                }
-            }
-            $fav = $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE `subject_id` = '{$movie->id}'");
-            if ($fav) {
-                $movie->fav_time = $fav->create_time;
-                $movie->score = $fav->score;
-                $movie->remark = $fav->remark;
-            } else {
-                $movie->fav_time = "";
-                $movie->score = "";
-                $movie->remark = "";
-            }
-            return $movie;
+            return $this->populate_db_movie_metadata($movie);
         }
 
         // Fetch from NeoDB API
@@ -701,11 +784,17 @@ class WPD_Douban
             $description = mb_substr($description, 0, 247, 'UTF-8') . '...';
         }
 
-        // Prepare data for insertion
+
+        // Extract external IDs (Douban ID, TMDB ID)
+        $external_ids = $this->extract_external_ids_from_neodb($data);
+
+        // Prepare data for insertion/update
         $insert_data = [
             'name' => $data['display_title'] ?? $data['title'],
             'poster' => $data['cover_image_url'] ?? '',
-            'douban_id' => 0,  // Set to 0 for NeoDB items (non-Douban source)
+            'douban_id' => $external_ids['douban_id'],
+            'tmdb_id' => $external_ids['tmdb_id'],
+            'tmdb_type' => $external_ids['tmdb_type'],
             'douban_score' => $data['rating'] ?? 0,
             'link' => $data['url'] ?? '',
             'type' => $type,
@@ -723,24 +812,49 @@ class WPD_Douban
             $insert_data['pubdate'] = $data['release_date'];
         }
 
-        // Insert into database
-        $wpdb->insert($wpdb->douban_movies, $insert_data);
-        $movie_id = $wpdb->insert_id;
+        // Use universal deduplication helper to check all ID types
+        $existing_movie = $this->find_existing_movie(
+            $type,
+            $external_ids['douban_id'],
+            $external_ids['tmdb_id'],
+            $external_ids['tmdb_type'],
+            $uuid
+        );
 
-        // Log the embed action
-        if ($movie_id) {
-            $title = $data['display_title'] ?? $data['title'];
-            $this->add_log($type, 'embed', 'neodb', $title);
+        if ($existing_movie) {
+            // Smart merge: only update empty fields
+            $update_data = $this->smart_merge_movie_data($existing_movie, $insert_data);
+            if (!empty($update_data)) {
+                $wpdb->update(
+                    $wpdb->douban_movies,
+                    $update_data,
+                    ['id' => $existing_movie->id]
+                );
+            }
+            $movie_id = $existing_movie->id;
+            $this->add_log($type, 'embed', 'neodb', "merged with existing movie ID {$existing_movie->id}");
+        } else {
+            // Insert into database as new entry
+            $wpdb->insert($wpdb->douban_movies, $insert_data);
+            $movie_id = $wpdb->insert_id;
+
+            // Log the embed action
+            if ($movie_id) {
+                $title = $data['display_title'] ?? $data['title'];
+                $this->add_log($type, 'embed', 'neodb', $title);
+            }
         }
 
         // Insert genres if available
         if ($movie_id && isset($data['genre']) && is_array($data['genre'])) {
+            $genre_map = $this->get_genre_mapping();
             foreach ($data['genre'] as $genre) {
+                $final_genre = isset($genre_map[$genre]) ? $genre_map[$genre] : $genre;
                 $wpdb->insert(
                     $wpdb->douban_genres,
                     [
                         'movie_id' => $movie_id,
-                        'name' => $genre,
+                        'name' => $final_genre,
                         'type' => $type,
                     ]
                 );
@@ -765,20 +879,28 @@ class WPD_Douban
         $neodb_type = $matches[1];  // book, movie, tv, album, etc
         $uuid = $matches[2];         // UUID
 
-        $html = $this->get_neodb_subject_detail($uuid, $neodb_type);
+        $html = $this->get_neodb_subject_detail($uuid, $neodb_type, $url);  // Pass original URL
         return apply_filters('embed_neodb', $html, $matches, $attr, $url, $rawattr);
     }
 
-    public function get_neodb_subject_detail($uuid, $neodb_type)
+    public function get_neodb_subject_detail($uuid, $neodb_type, $embed_url = null)
     {
         $data = $this->fetch_neodb_subject($uuid, $neodb_type);
         if (!$data)
             return '';
+        
+        // Override link with embed URL if provided
+        if ($embed_url) {
+            $data->link = $embed_url;
+        }
 
         $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($uuid, $data->poster, 'neodb_') : $data->poster;
-
         $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' . $cover . '"></div>';
 
+        $meta_items = [];
+        if (!empty($data->is_top250)) {
+            $meta_items[] = 'Top 250';
+        }
         if ($this->db_get_setting("show_remark") && $data->fav_time) {
             $status_label = 'Marked';
             if (isset($data->status)) {
@@ -786,7 +908,11 @@ class WPD_Douban
                 $status_label = $status_map[$data->status] ?? 'Marked';
             }
             $score_text = $data->score ? ' ' . $data->score . '分' : '';
-            $output .= '<div class="db--viewTime JiEun">' . $data->fav_time . ' ' . $status_label . $score_text . '</div>';
+            $meta_items[] = date('Y-m-d', strtotime($data->fav_time)) . ' ' . $status_label . $score_text;
+        }
+
+        if (!empty($meta_items)) {
+            $output .= '<div class="db--viewTime JiEun">' . implode(' · ', $meta_items) . '</div>';
         }
 
         $output .= '<div class="doulist-content"><div class="doulist-title"><a href="' . $data->link . '" class="cute" target="_blank" rel="external nofollow">' . $data->name . '</a></div>';
@@ -868,7 +994,7 @@ class WPD_Douban
             $movie_id = '';
             if (!$movie) {
                 $wpdb->insert(
-                    $wpdb->douban_douban_movies,
+                    $wpdb->douban_movies,
                     array(
                         'name' => $interest['title'],
                         'poster' => $interest['pic']['large'],
@@ -895,5 +1021,341 @@ class WPD_Douban
                 ]);
             }
         }
+    }
+
+    public function preview_source_data($request)
+    {
+        $subject_id = intval($request['subject_id']);
+        $source = sanitize_text_field($request['source']);
+
+        global $wpdb;
+        $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
+
+        if (!$subject) {
+            return [
+                'success' => false,
+                'message' => 'Subject not found'
+            ];
+        }
+
+        $fresh_data = null;
+        $debug_info = [
+            'source' => $source,
+            'subject_id' => $subject_id,
+            'douban_id' => $subject->douban_id ?? null,
+            'neodb_id' => $subject->neodb_id ?? null,
+            'tmdb_id' => $subject->tmdb_id ?? null,
+            'tmdb_type' => $subject->tmdb_type ?? null
+        ];
+
+        // Fetch fresh data DIRECTLY from API (not from database)
+        switch ($source) {
+            case 'douban':
+                if ($subject->douban_id) {
+                    // Call Douban API directly
+                    $type = $subject->type;
+                    if ($type == 'movie') {
+                        $link = $this->base_url . "movie/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                    } elseif ($type == 'book') {
+                        $link = $this->base_url . "book/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                    } elseif ($type == 'game') {
+                        $link = $this->base_url . "game/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                    } elseif ($type == 'drama') {
+                        $link = $this->base_url . "drama/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                    } else {
+                        $link = $this->base_url . "music/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                    }
+                    $debug_info['api_url'] = $link;
+                    
+                    $response = wp_remote_get($link, ['sslverify' => false]);
+                    if (!is_wp_error($response)) {
+                        $body = wp_remote_retrieve_body($response);
+                        $data = json_decode($body, true);
+                        $debug_info['api_status'] = wp_remote_retrieve_response_code($response);
+                        
+                        if ($data) {
+                            $fresh_data = (object) [
+                                'name' => $data['title'],
+                                'poster' => $data['pic']['large'],
+                                'douban_score' => $data['rating']['value'],
+                                'card_subtitle' => $data['card_subtitle']
+                            ];
+                        } else {
+                            $debug_info['api_response_empty'] = true;
+                        }
+                    } else {
+                        $debug_info['api_error'] = $response->get_error_message();
+                    }
+                }
+                break;
+            case 'neodb':
+                if ($subject->neodb_id) {
+                    // Call NeoDB API directly (use type-specific endpoint)
+                    $neodb_type_map = [
+                        'movie' => 'movie',
+                        'book' => 'book',
+                        'music' => 'album',
+                        'game' => 'game',
+                        'drama' => 'performance'
+                    ];
+                    $neodb_type = $neodb_type_map[$subject->type] ?? 'movie';
+                    $url = "https://neodb.social/api/{$neodb_type}/" . $subject->neodb_id;
+                    $debug_info['api_url'] = $url;
+                    
+                    $response = wp_remote_get($url, ['sslverify' => false]);
+                    if (!is_wp_error($response)) {
+                        $body = wp_remote_retrieve_body($response);
+                        $data = json_decode($body, true);
+                        $debug_info['api_status'] = wp_remote_retrieve_response_code($response);
+                        
+                        if ($data && !isset($data['error'])) {
+                            $fresh_data = (object) [
+                                'name' => $data['title'] ?? '',
+                                'poster' => $data['cover_image_url'] ?? '',
+                                'douban_score' => $data['rating'] ?? '',
+                                'card_subtitle' => $data['brief'] ?? ''
+                            ];
+                        } else {
+                            $debug_info['api_response'] = $data;
+                        }
+                    } else {
+                        $debug_info['api_error'] = $response->get_error_message();
+                    }
+                }
+                break;
+            case 'tmdb':
+                if ($subject->tmdb_id && $subject->tmdb_type) {
+                    // Call TMDB API directly
+                    $api_key = $this->db_get_setting('api_key');
+                    if ($subject->tmdb_type == 'movie') {
+                        $url = "https://api.themoviedb.org/3/movie/{$subject->tmdb_id}?api_key={$api_key}&language=zh-CN";
+                    } else {
+                        $url = "https://api.themoviedb.org/3/tv/{$subject->tmdb_id}?api_key={$api_key}&language=zh-CN";
+                    }
+                    $debug_info['api_url'] = $url;
+                    
+                    $response = wp_remote_get($url, ['sslverify' => false]);
+                    if (!is_wp_error($response)) {
+                        $body = wp_remote_retrieve_body($response);
+                        $data = json_decode($body, true);
+                        $debug_info['api_status'] = wp_remote_retrieve_response_code($response);
+                        
+                        if ($data && !isset($data['success']) && !isset($data['status_code'])) {
+                            // Validate that we have actual data
+                            $title = isset($data['title']) ? $data['title'] : (isset($data['name']) ? $data['name'] : '');
+                            $poster = '';
+                            if (isset($data['poster_path']) && $data['poster_path']) {
+                                $poster = "https://image.tmdb.org/t/p/original" . $data['poster_path'];
+                            }
+                            
+                            $fresh_data = (object) [
+                                'name' => $title,
+                                'poster' => $poster,
+                                'douban_score' => $data['vote_average'] ?? '',
+                                'card_subtitle' => $data['overview'] ?? ''
+                            ];
+                        } else {
+                            $debug_info['api_response'] = $data;
+                        }
+                    } else {
+                        $debug_info['api_error'] = $response->get_error_message();
+                    }
+                }
+                break;
+        }
+
+        if (!$fresh_data) {
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch data from ' . $source,
+                'debug' => $debug_info
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'name' => $fresh_data->name ?? '',
+                'poster' => $fresh_data->poster ?? '',
+                'douban_score' => $fresh_data->douban_score ?? '',
+                'card_subtitle' => $fresh_data->card_subtitle ?? ''
+            ],
+            'source' => $source
+        ];
+    }
+
+    private function populate_db_movie_metadata($movie)
+    {
+        if (!$movie) return null;
+        global $wpdb;
+
+        // Populate Genres
+        if (empty($movie->genres)) {
+            $movie->genres = [];
+            $genres = $wpdb->get_results("SELECT * FROM $wpdb->douban_genres WHERE `movie_id` = {$movie->id}");
+            if (!empty($genres)) {
+                foreach ($genres as $genre) {
+                    $movie->genres[] = $genre->name;
+                }
+            }
+        }
+
+        // Populate Favorite data
+        $fav = $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE `subject_id` = '{$movie->id}'");
+        if ($fav) {
+            $movie->fav_time = $fav->create_time;
+            $movie->score = $fav->score;
+            $movie->remark = $fav->remark;
+            $movie->status = $fav->status;
+        } else {
+            $movie->fav_time = !isset($movie->fav_time) ? "" : $movie->fav_time;
+            $movie->score = !isset($movie->score) ? "" : $movie->score;
+            $movie->remark = !isset($movie->remark) ? "" : $movie->remark;
+        }
+
+        // Handle Image Cache
+        if ($this->db_get_setting('download_image')) {
+            $cache_id = $movie->douban_id;
+            $cache_prefix = '';
+            if (!empty($movie->neodb_id)) {
+                $cache_id = $movie->neodb_id;
+                $cache_prefix = 'neodb_';
+            } elseif (!empty($movie->tmdb_id)) {
+                $cache_id = $movie->tmdb_id;
+                $cache_prefix = 'tmdb';
+            }
+            $movie->poster = $this->wpd_save_images($cache_id, $movie->poster, $cache_prefix);
+        } else if (in_array($movie->type, ['movie', 'book', 'music']) && !empty($movie->douban_id)) {
+            // Use image proxy if not downloading
+            $movie->poster = "https://dou.img.lithub.cc/" . $movie->type . "/" . $movie->douban_id . ".jpg";
+        }
+        
+        // Check Top 250
+        if ($this->db_get_setting('top250') && ($movie->type == 'movie' || $movie->type == 'book') && !empty($movie->douban_id)) {
+            $collection_name = $movie->type == 'book' ? 'book_top250' : 'movie_top250';
+            $collection = $this->get_collection($collection_name);
+            if ($collection) {
+                // Cross-source support: check if any record with this douban_id is in Top 250
+                $re = $wpdb->get_results("SELECT r.id FROM $wpdb->douban_relation r JOIN $wpdb->douban_movies m ON r.movie_id = m.id WHERE m.douban_id = '{$movie->douban_id}' AND r.collection_id = {$collection->id}");
+                $movie->is_top250 = !empty($re);
+            }
+        }
+        return $movie;
+    }
+
+    /**
+     * Extract external IDs from NeoDB external_resources
+     * 
+     * @param array $data NeoDB item data
+     * @return array ['douban_id' => int, 'tmdb_id' => int, 'tmdb_type' => string]
+     */
+    protected function extract_external_ids_from_neodb($data)
+    {
+        $result = [
+            'douban_id' => 0,
+            'tmdb_id' => 0,
+            'tmdb_type' => null
+        ];
+        
+        if (!isset($data['external_resources']) || !is_array($data['external_resources'])) {
+            return $result;
+        }
+        
+        foreach ($data['external_resources'] as $resource) {
+            $url = $resource['url'] ?? '';
+            
+            // 豆瓣 ID
+            if ($result['douban_id'] === 0 && preg_match('/douban\.com\/subject\/(\d+)/', $url, $matches)) {
+                $result['douban_id'] = intval($matches[1]);
+            }
+            
+            // TMDB Movie ID
+            if ($result['tmdb_id'] === 0 && preg_match('/themoviedb\.org\/movie\/(\d+)/', $url, $matches)) {
+                $result['tmdb_id'] = intval($matches[1]);
+                $result['tmdb_type'] = 'movie';
+            }
+            
+            // TMDB TV ID
+            if ($result['tmdb_id'] === 0 && preg_match('/themoviedb\.org\/tv\/(\d+)/', $url, $matches)) {
+                $result['tmdb_id'] = intval($matches[1]);
+                $result['tmdb_type'] = 'tv';
+            }
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Find existing movie entry by checking douban_id, tmdb_id, or neodb_id
+     * This prevents duplicate entries regardless of embed order
+     * 
+     * @param string $type Movie type (movie, book, etc.)
+     * @param int $douban_id Douban ID (0 if not available)
+     * @param int $tmdb_id TMDB ID (0 if not available)
+     * @param string $tmdb_type TMDB type (movie/tv)
+     * @param string $neodb_id NeoDB UUID (empty if not available)
+     * @return object|null Existing movie record or null
+     */
+    protected function find_existing_movie($type, $douban_id = 0, $tmdb_id = 0, $tmdb_type = null, $neodb_id = '')
+    {
+        global $wpdb;
+
+        // Priority 1: Check by neodb_id (most specific)
+        if (!empty($neodb_id)) {
+            $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `neodb_id` = '{$neodb_id}'");
+            if ($movie) return $movie;
+        }
+
+        // Priority 2: Check by douban_id
+        if ($douban_id > 0) {
+            $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `type` = '{$type}' AND `douban_id` = {$douban_id}");
+            if ($movie) return $movie;
+        }
+
+        // Priority 3: Check by tmdb_id
+        if ($tmdb_id > 0 && $tmdb_type) {
+            $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `tmdb_type` = '{$tmdb_type}' AND `tmdb_id` = {$tmdb_id}");
+            if ($movie) return $movie;
+        }
+
+        return null;
+    }
+
+    /**
+     * Smart merge movie data - only update empty fields
+     * Preserves existing data while filling in missing information
+     * 
+     * @param object $existing_movie Existing movie record
+     * @param array $new_data New data to merge
+     * @return array Fields to update (empty if no updates needed)
+     */
+    protected function smart_merge_movie_data($existing_movie, $new_data)
+    {
+        $update_data = [];
+
+        // ID fields: always update if new data has it and existing doesn't
+        $id_fields = ['douban_id', 'neodb_id', 'tmdb_id', 'tmdb_type'];
+        foreach ($id_fields as $field) {
+            if (isset($new_data[$field]) && !empty($new_data[$field]) && empty($existing_movie->$field)) {
+                $update_data[$field] = $new_data[$field];
+            }
+        }
+
+        // Content fields: only fill if currently empty/null
+        $fillable_fields = ['name', 'poster', 'douban_score', 'link', 'year', 'pubdate', 'card_subtitle'];
+        foreach ($fillable_fields as $field) {
+            if (isset($new_data[$field]) && !empty($new_data[$field])) {
+                // Check if existing field is empty
+                if (!isset($existing_movie->$field) || 
+                    $existing_movie->$field === '' || 
+                    $existing_movie->$field === null || 
+                    $existing_movie->$field === '0' ||
+                    $existing_movie->$field === 0) {
+                    $update_data[$field] = $new_data[$field];
+                }
+            }
+        }
+
+        return $update_data;
     }
 }
