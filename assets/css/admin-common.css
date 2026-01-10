@@ -1,0 +1,23 @@
+/* Common styles for WP-Douban admin pages */
+
+/* Ensure filter lists appear on separate lines */
+.subsubsub {
+    clear: both;
+    display: block;
+    float: none;
+    margin-bottom: 0px; /* Reset margin to control spacing manually */
+}
+
+/* Add spacing between filter rows usually handled by margin-top on specific elements in PHP if needed, 
+   but standard subsubsub has bottom margin. Let's ensure consistent spacing. */
+.subsubsub + .subsubsub {
+    margin-top: 0px;
+}
+
+.wpd-top250 {
+    background: #ffac2d;
+    color: #fff;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-size: 10px;
+}
