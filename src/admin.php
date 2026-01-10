@@ -66,16 +66,20 @@ class WPD_ADMIN extends WPD_Douban
         if (isset($_POST['wpd_action']) && 'edit_fave' === $_POST['wpd_action']) {
             global $wpdb;
             if (isset($_POST['status']) && $_POST['status']) {
+                // Validate status against allowed values
+                $allowed_statuses = ['mark', 'doing', 'done', 'dropped'];
+                $status_value = in_array($_POST['status'], $allowed_statuses) ? $_POST['status'] : 'done';
+                
                 $wpdb->update(
                     $wpdb->douban_faves,
                     [
-                        'remark' => $_POST['remark'],
-                        'score' => $_POST['score'],
-                        'create_time' => get_gmt_from_date($_POST['create_time']),
-                        'status' => $_POST['status'],
+                        'remark' => sanitize_textarea_field($_POST['remark']),
+                        'score' => intval($_POST['score']),
+                        'create_time' => get_gmt_from_date(sanitize_text_field($_POST['create_time'])),
+                        'status' => $status_value,
                     ],
                     [
-                        'id' => $_POST['fave_id'],
+                        'id' => intval($_POST['fave_id']),
                     ]
                 );
             } else {
@@ -97,18 +101,19 @@ class WPD_ADMIN extends WPD_Douban
 
         if (isset($_POST['wpd_action']) && 'edit_subject' === $_POST['wpd_action']) {
             global $wpdb;
-            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$_POST['subject_id']}'");
+            $subject_id = intval($_POST['subject_id']);
+            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
             $this->wpd_remove_images($subject->douban_id);
             $wpdb->update(
                 $wpdb->douban_movies,
                 [
-                    'name' => $_POST['name'],
-                    'douban_score' => $_POST['douban_score'],
-                    'card_subtitle' => $_POST['card_subtitle'],
-                    'poster' => $_POST['poster']
+                    'name' => sanitize_text_field($_POST['name']),
+                    'douban_score' => floatval($_POST['douban_score']),
+                    'card_subtitle' => sanitize_textarea_field($_POST['card_subtitle']),
+                    'poster' => esc_url_raw($_POST['poster'])
                 ],
                 [
-                    'id' => $_POST['subject_id'],
+                    'id' => $subject_id,
                 ]
             );
             $link = array(
@@ -182,7 +187,8 @@ class WPD_ADMIN extends WPD_Douban
 
         if (isset($_GET['wpd_action']) && 'delete_subject' === $_GET['wpd_action']) {
             global $wpdb;
-            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$_GET['subject_id']}'");
+            $subject_id = intval($_GET['subject_id']);
+            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
             $this->wpd_remove_images($subject->douban_id);
 
             $wpdb->delete(
