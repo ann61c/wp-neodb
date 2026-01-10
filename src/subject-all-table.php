@@ -64,7 +64,13 @@ class Subject_ALL_Table extends \WP_List_Table
 
         $filter = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? " AND m.type = '{$_GET['subject_type']}'" : '';
         $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
-        $subjects = $wpdb->get_results("SELECT * FROM $wpdb->douban_movies m WHERE 1=1{$filter} ORDER BY m.id DESC LIMIT 40 OFFSET {$offset}");
+        $top250_id = $wpdb->get_var("SELECT id FROM $wpdb->douban_collection WHERE douban_id = 'movie_top250'");
+        
+        if ($top250_id) {
+            $subjects = $wpdb->get_results("SELECT m.*, r.collection_id as is_top250 FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_relation r ON m.id = r.movie_id AND r.collection_id = $top250_id WHERE 1=1{$filter} ORDER BY m.id DESC LIMIT 40 OFFSET {$offset}");
+        } else {
+            $subjects = $wpdb->get_results("SELECT * FROM $wpdb->douban_movies m WHERE 1=1{$filter} ORDER BY m.id DESC LIMIT 40 OFFSET {$offset}");
+        }
 
         $this->items = $subjects;
 
@@ -177,6 +183,11 @@ class Subject_ALL_Table extends \WP_List_Table
     {
         switch ($column_name) {
             case 'name':
+                $out = $item->name;
+                if (!empty($item->is_top250)) {
+                    $out .= ' <span style="background:#ffac2d;color:#fff;padding:1px 3px;border-radius:2px;font-size:10px;">Top250</span>';
+                }
+                return $out;
             case 'douban_score':
             case 'card_subtitle':
             case 'remark':
