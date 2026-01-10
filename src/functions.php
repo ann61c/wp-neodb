@@ -549,6 +549,10 @@ class WPD_Douban
             return $this->populate_db_movie_metadata($movie);
         }
 
+        $transient_key = 'wpd_tmdb_' . $type . '_' . $id;
+        $cached = get_transient($transient_key);
+        if ($cached) return $cached;
+
         $response = wp_remote_get("https://api.themoviedb.org/3/" . $type . "/" . $id . "?api_key=" . $this->db_get_setting('api_key') . "&language=zh-CN", ['sslverify' => false]);
         if (is_wp_error($response)) {
             return false;
@@ -605,15 +609,16 @@ class WPD_Douban
                 foreach ($data['genres'] as $genre) {
                     $wpdb->insert(
                         $wpdb->douban_genres,
-                            [
-                                'movie_id' => $movie_id,
-                                'name' => $genre['name'],
-                                'type' => $type,
-                            ]
-                        );
-                    }
+                        [
+                            'movie_id' => $movie_id,
+                            'name' => $genre['name'],
+                            'type' => $type,
+                        ]
+                    );
+                }
             }
-            return (object) [
+
+            $result = (object) [
                 'id' => $movie_id,
                 'name' => isset($data['title']) ? $data['title'] : $data['name'],
                 'poster' => "https://image.tmdb.org/t/p/original" . $data['poster_path'],
@@ -629,6 +634,8 @@ class WPD_Douban
                 'remark' => '',
                 'score' => ''
             ];
+            set_transient($transient_key, $result, 600);
+            return $result;
         } else {
             return false;
         }
@@ -642,6 +649,10 @@ class WPD_Douban
         if ($movie) {
             return $this->populate_db_movie_metadata($movie);
         }
+
+        $transient_key = 'wpd_douban_' . $type . '_' . $id;
+        $cached = get_transient($transient_key);
+        if ($cached) return $cached;
 
         if ($type == 'movie') {
             $link = $this->base_url . "movie/" . $id . "?ck=xgtY&for_mobile=1";
@@ -708,15 +719,16 @@ class WPD_Douban
                 foreach ($data['genres'] as $genre) {
                     $wpdb->insert(
                         $wpdb->douban_genres,
-                            [
-                                'movie_id' => $movie_id,
-                                'name' => $genre,
-                                'type' => $type,
-                            ]
-                        );
-                    }
+                        [
+                            'movie_id' => $movie_id,
+                            'name' => $genre,
+                            'type' => $type,
+                        ]
+                    );
+                }
             }
-            return (object) [
+
+            $result = (object) [
                 'id' => $movie_id,
                 'name' => $data['title'],
                 'poster' => $data['pic']['large'],
@@ -732,6 +744,8 @@ class WPD_Douban
                 'remark' => '',
                 'score' => ''
             ];
+            set_transient($transient_key, $result, 600);
+            return $result;
         } else {
             return false;
         }
@@ -746,6 +760,10 @@ class WPD_Douban
         if ($movie) {
             return $this->populate_db_movie_metadata($movie);
         }
+
+        $transient_key = 'wpd_neodb_' . $uuid;
+        $cached = get_transient($transient_key);
+        if ($cached) return $cached;
 
         // Fetch from NeoDB API
         $neodb_url = $this->db_get_setting('neodb_url') ? $this->db_get_setting('neodb_url') : 'https://neodb.social';
@@ -862,13 +880,15 @@ class WPD_Douban
         }
 
         // Return formatted object
-        return (object) array_merge($insert_data, [
+        $result = (object) array_merge($insert_data, [
             'id' => $movie_id,
             'genres' => $data['genre'] ?? [],
             'fav_time' => '',
             'remark' => '',
             'score' => ''
         ]);
+        set_transient($transient_key, $result, 600);
+        return $result;
     }
 
     function wp_embed_handler_neodb($matches, $attr, $url, $rawattr)
