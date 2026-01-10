@@ -115,11 +115,17 @@ class db_sync extends WPD_Douban
 
                         $wpd_type = $category_type_map[$category] ?? 'movie';
 
-                        // Check if item exists in database
-                        $movie = $wpdb->get_row($wpdb->prepare(
-                            "SELECT * FROM $wpdb->douban_movies WHERE neodb_id = %s",
+                        // Extract external IDs (Douban ID, TMDB ID) first
+                        $external_ids = $this->extract_external_ids_from_neodb($item);
+
+                        // Use universal deduplication - check by neodb_id, douban_id, or tmdb_id
+                        $movie = $this->find_existing_movie(
+                            $wpd_type,
+                            $external_ids['douban_id'],
+                            $external_ids['tmdb_id'],
+                            $external_ids['tmdb_type'],
                             $neodb_id
-                        ));
+                        );
 
                         // Truncate description to prevent insert failure
                         $description = $item['brief'] ?? '';
@@ -127,43 +133,39 @@ class db_sync extends WPD_Douban
                             $description = mb_substr($description, 0, 247, 'UTF-8') . '...';
                         }
 
-                        if (!$movie) {
-                            // Extract external IDs (Douban ID, TMDB ID)
-                            $external_ids = $this->extract_external_ids_from_neodb($item);
-                            
-                            // Insert new item
-                            $wpdb->insert($wpdb->douban_movies, [
-                                'name' => $item['display_title'] ?? $item['title'],
-                                'poster' => $item['cover_image_url'] ?? '',
-                                'douban_id' => $external_ids['douban_id'],
-                                'tmdb_id' => $external_ids['tmdb_id'],
-                                'tmdb_type' => $external_ids['tmdb_type'],
-                                'douban_score' => $item['rating'] ?? 0,
-                                'link' => $item['url'] ?? '',
-                                'year' => $item['year'] ?? '',
-                                'type' => $wpd_type,
-                                'card_subtitle' => $description,
-                                'neodb_id' => $neodb_id,
-                            ]);
+                        // Prepare sync data
+                        $sync_data = [
+                            'name' => $item['display_title'] ?? $item['title'],
+                            'poster' => $item['cover_image_url'] ?? '',
+                            'douban_id' => $external_ids['douban_id'],
+                            'tmdb_id' => $external_ids['tmdb_id'],
+                            'tmdb_type' => $external_ids['tmdb_type'],
+                            'douban_score' => $item['rating'] ?? 0,
+                            'link' => $item['url'] ?? '',
+                            'year' => $item['year'] ?? '',
+                            'type' => $wpd_type,
+                            'card_subtitle' => $description,
+                            'neodb_id' => $neodb_id,
+                        ];
 
-                            if ($wpdb->insert_id) {
-                                $movie_id = $wpdb->insert_id;
-                                $processed_count++;
-
-                                // Insert fave record
-                                $wpdb->insert($wpdb->douban_faves, [
-                                    'create_time' => $mark['created_time'] ?? date('Y-m-d H:i:s'),
-                                    'remark' => $mark['comment_text'] ?? '',
-                                    'score' => $mark['rating_grade'] ?? '',
-                                    'subject_id' => $movie_id,
-                                    'type' => $wpd_type,
-                                    'status' => $wpd_status,
-                                ]);
+                        if ($movie) {
+                            // Movie exists - smart merge to fill in missing fields
+                            $update_data = $this->smart_merge_movie_data($movie, $sync_data);
+                            if (!empty($update_data)) {
+                                $wpdb->update($wpdb->douban_movies, $update_data, ['id' => $movie->id]);
                             }
-                        } else {
-                            // Item exists, check/update fave record
                             $movie_id = $movie->id;
+                        } else {
+                            // Insert new item
+                            $wpdb->insert($wpdb->douban_movies, $sync_data);
+                            $movie_id = $wpdb->insert_id;
+                            if ($movie_id) {
+                                $processed_count++;
+                            }
+                        }
 
+                        if ($movie_id) {
+                            // Check/update fave record
                             $fav = $wpdb->get_row($wpdb->prepare(
                                 "SELECT * FROM $wpdb->douban_faves WHERE subject_id = %d",
                                 $movie_id
@@ -179,7 +181,9 @@ class db_sync extends WPD_Douban
                                     'type' => $wpd_type,
                                     'status' => $wpd_status,
                                 ]);
-                                $processed_count++;
+                                if (!$movie) {
+                                    $processed_count++;
+                                }
                             } else if ($fav->status != $wpd_status || $fav->remark != ($mark['comment_text'] ?? '')) {
                                 // Update existing fave if status or comment changed
                                 $wpdb->update($wpdb->douban_faves, [
@@ -188,7 +192,9 @@ class db_sync extends WPD_Douban
                                     'score' => $mark['rating_grade'] ?? '',
                                     'status' => $wpd_status,
                                 ], ['id' => $fav->id]);
-                                $processed_count++;
+                                if (!$movie) {
+                                    $processed_count++;
+                                }
                             }
                         }
                     }

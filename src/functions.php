@@ -990,28 +990,48 @@ class WPD_Douban
         }
 
         foreach ($interests as $interest) {
-            $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `type` = '{$interest['type']}' AND douban_id = {$interest['id']}");
-            $movie_id = '';
-            if (!$movie) {
-                $wpdb->insert(
-                    $wpdb->douban_movies,
-                    array(
-                        'name' => $interest['title'],
-                        'poster' => $interest['pic']['large'],
-                        'douban_id' => $interest['id'],
-                        'douban_score' => $interest['rating']['value'],
-                        'link' => $interest['url'],
-                        'year' => '',
-                        'type' => $interest['type'],
-                        'pubdate' => '',
-                        'card_subtitle' => $interest['card_subtitle'],
-                    )
-                );
-                $movie_id = $wpdb->insert_id;
-            } else {
-                $movie_id = $movie->id;
+            // Use universal deduplication - check by douban_id, neodb_id, or tmdb_id
+            $existing_movie = $this->find_existing_movie(
+                $interest['type'],
+                $interest['id'],  // douban_id
+                0,
+                null,
+                ''
+            );
+
+            // Extract year from card_subtitle (format: "1994 / 美国 / 剧情...")
+            $year = '';
+            if (preg_match('/^(\d{4})/', $interest['card_subtitle'], $matches)) {
+                $year = $matches[1];
             }
 
+            // Prepare Top 250 data
+            $top250_data = array(
+                'name' => $interest['title'],
+                'poster' => $interest['pic']['large'],
+                'douban_id' => $interest['id'],
+                'douban_score' => $interest['rating']['value'],
+                'link' => $interest['url'],
+                'year' => $year,
+                'type' => $interest['type'],
+                'pubdate' => '',
+                'card_subtitle' => $interest['card_subtitle'],
+            );
+
+            if ($existing_movie) {
+                // Movie exists - smart merge to fill in missing fields
+                $update_data = $this->smart_merge_movie_data($existing_movie, $top250_data);
+                if (!empty($update_data)) {
+                    $wpdb->update($wpdb->douban_movies, $update_data, ['id' => $existing_movie->id]);
+                }
+                $movie_id = $existing_movie->id;
+            } else {
+                // Insert new movie
+                $wpdb->insert($wpdb->douban_movies, $top250_data);
+                $movie_id = $wpdb->insert_id;
+            }
+
+            // Manage Top 250 relation
             $relation = $wpdb->get_row("SELECT * FROM $wpdb->douban_relation WHERE `movie_id` = {$movie_id} AND `collection_id` = {$collection_id}");
 
             if (!$relation) {
@@ -1302,19 +1322,30 @@ class WPD_Douban
 
         // Priority 1: Check by neodb_id (most specific)
         if (!empty($neodb_id)) {
-            $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `neodb_id` = '{$neodb_id}'");
+            $movie = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $wpdb->douban_movies WHERE neodb_id = %s",
+                $neodb_id
+            ));
             if ($movie) return $movie;
         }
 
         // Priority 2: Check by douban_id
         if ($douban_id > 0) {
-            $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `type` = '{$type}' AND `douban_id` = {$douban_id}");
+            $movie = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $wpdb->douban_movies WHERE type = %s AND douban_id = %d",
+                $type,
+                $douban_id
+            ));
             if ($movie) return $movie;
         }
 
         // Priority 3: Check by tmdb_id
         if ($tmdb_id > 0 && $tmdb_type) {
-            $movie = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE `tmdb_type` = '{$tmdb_type}' AND `tmdb_id` = {$tmdb_id}");
+            $movie = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $wpdb->douban_movies WHERE tmdb_type = %s AND tmdb_id = %d",
+                $tmdb_type,
+                $tmdb_id
+            ));
             if ($movie) return $movie;
         }
 
