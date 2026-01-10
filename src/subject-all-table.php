@@ -191,9 +191,10 @@ class Subject_ALL_Table extends \WP_List_Table
             case 'douban_score':
             case 'card_subtitle':
             case 'remark':
-            case 'create_time':
             case 'score':
                 return $item->$column_name;
+            case 'create_time':
+                return $item->create_time ? wp_date(get_option('date_format') . ' ' . get_option('time_format'), strtotime($item->create_time)) : '';
             case 'genre':
                 return $this->get_genres($item->id);
 
@@ -203,8 +204,11 @@ class Subject_ALL_Table extends \WP_List_Table
                 return '<img src="' . $this->wpd_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
 
             case 'tmdb_type':
-                if ($item->neodb_id) return 'NeoDB';
-                return $item->$column_name ? 'TMDB' : '豆瓣';
+                $sources = [];
+                if ($item->douban_id) $sources[] = '豆瓣';
+                if ($item->neodb_id) $sources[] = 'NeoDB';
+                if ($item->tmdb_id) $sources[] = 'TMDB';
+                return implode(', ', $sources);
 
             default:
                 return print_r($item, true);
