@@ -68,7 +68,8 @@ jQuery(document).ready(function($) {
             },
             data: {
                 subject_id: subjectId,
-                source: source
+                source: source,
+                action: wpd_subject_edit.action
             },
             success: function(response) {
                 console.log('API Response:', response); // Debug

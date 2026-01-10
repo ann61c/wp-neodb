@@ -1047,6 +1047,7 @@ class WPD_Douban
     {
         $subject_id = intval($request['subject_id']);
         $source = sanitize_text_field($request['source']);
+        $action = sanitize_text_field($request['action'] ?? 'edit_subject');
 
         global $wpdb;
         $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
@@ -1059,149 +1060,156 @@ class WPD_Douban
         }
 
         $fresh_data = null;
-        $debug_info = [
-            'source' => $source,
-            'subject_id' => $subject_id,
-            'douban_id' => $subject->douban_id ?? null,
-            'neodb_id' => $subject->neodb_id ?? null,
-            'tmdb_id' => $subject->tmdb_id ?? null,
-            'tmdb_type' => $subject->tmdb_type ?? null
-        ];
 
-        // Fetch fresh data DIRECTLY from API (not from database)
-        switch ($source) {
-            case 'douban':
-                if ($subject->douban_id) {
-                    // Call Douban API directly
-                    $type = $subject->type;
-                    if ($type == 'movie') {
-                        $link = $this->base_url . "movie/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
-                    } elseif ($type == 'book') {
-                        $link = $this->base_url . "book/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
-                    } elseif ($type == 'game') {
-                        $link = $this->base_url . "game/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
-                    } elseif ($type == 'drama') {
-                        $link = $this->base_url . "drama/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
-                    } else {
-                        $link = $this->base_url . "music/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
-                    }
-                    $debug_info['api_url'] = $link;
-                    
-                    $response = wp_remote_get($link, ['sslverify' => false]);
-                    if (!is_wp_error($response)) {
-                        $body = wp_remote_retrieve_body($response);
-                        $data = json_decode($body, true);
-                        $debug_info['api_status'] = wp_remote_retrieve_response_code($response);
+        // For edit_fave mode, fetch user marking data
+        if ($action == 'edit_fave') {
+            switch ($source) {
+                case 'neodb':
+                    if ($subject->neodb_id && $this->db_get_setting('neodb_token')) {
+                        $neodb_url = $this->db_get_setting('neodb_url') ?: 'https://neodb.social';
                         
-                        if ($data) {
-                            $fresh_data = (object) [
-                                'name' => $data['title'],
-                                'poster' => $data['pic']['large'],
-                                'douban_score' => $data['rating']['value'],
-                                'card_subtitle' => $data['card_subtitle']
-                            ];
-                        } else {
-                            $debug_info['api_response_empty'] = true;
-                        }
-                    } else {
-                        $debug_info['api_error'] = $response->get_error_message();
-                    }
-                }
-                break;
-            case 'neodb':
-                if ($subject->neodb_id) {
-                    // Call NeoDB API directly (use type-specific endpoint)
-                    $neodb_type_map = [
-                        'movie' => 'movie',
-                        'book' => 'book',
-                        'music' => 'album',
-                        'game' => 'game',
-                        'drama' => 'performance'
-                    ];
-                    $neodb_type = $neodb_type_map[$subject->type] ?? 'movie';
-                    $url = "https://neodb.social/api/{$neodb_type}/" . $subject->neodb_id;
-                    $debug_info['api_url'] = $url;
-                    
-                    $response = wp_remote_get($url, ['sslverify' => false]);
-                    if (!is_wp_error($response)) {
-                        $body = wp_remote_retrieve_body($response);
-                        $data = json_decode($body, true);
-                        $debug_info['api_status'] = wp_remote_retrieve_response_code($response);
+                        // Use shelf API to get user's mark
+                        $shelf_url = rtrim($neodb_url, '/') . "/api/me/shelf/item/" . $subject->neodb_id;
+                        $headers = ['Authorization' => 'Bearer ' . $this->db_get_setting('neodb_token')];
                         
-                        if ($data && !isset($data['error'])) {
-                            $fresh_data = (object) [
-                                'name' => $data['title'] ?? '',
-                                'poster' => $data['cover_image_url'] ?? '',
-                                'douban_score' => $data['rating'] ?? '',
-                                'card_subtitle' => $data['brief'] ?? ''
-                            ];
-                        } else {
-                            $debug_info['api_response'] = $data;
-                        }
-                    } else {
-                        $debug_info['api_error'] = $response->get_error_message();
-                    }
-                }
-                break;
-            case 'tmdb':
-                if ($subject->tmdb_id && $subject->tmdb_type) {
-                    // Call TMDB API directly
-                    $api_key = $this->db_get_setting('api_key');
-                    if ($subject->tmdb_type == 'movie') {
-                        $url = "https://api.themoviedb.org/3/movie/{$subject->tmdb_id}?api_key={$api_key}&language=zh-CN";
-                    } else {
-                        $url = "https://api.themoviedb.org/3/tv/{$subject->tmdb_id}?api_key={$api_key}&language=zh-CN";
-                    }
-                    $debug_info['api_url'] = $url;
-                    
-                    $response = wp_remote_get($url, ['sslverify' => false]);
-                    if (!is_wp_error($response)) {
-                        $body = wp_remote_retrieve_body($response);
-                        $data = json_decode($body, true);
-                        $debug_info['api_status'] = wp_remote_retrieve_response_code($response);
+                        $response = wp_remote_get($shelf_url, ['headers' => $headers, 'sslverify' => false]);
                         
-                        if ($data && !isset($data['success']) && !isset($data['status_code'])) {
-                            // Validate that we have actual data
-                            $title = isset($data['title']) ? $data['title'] : (isset($data['name']) ? $data['name'] : '');
-                            $poster = '';
-                            if (isset($data['poster_path']) && $data['poster_path']) {
-                                $poster = "https://image.tmdb.org/t/p/original" . $data['poster_path'];
-                            }
+                        if (!is_wp_error($response)) {
+                            $status_code = wp_remote_retrieve_response_code($response);
                             
-                            $fresh_data = (object) [
-                                'name' => $title,
-                                'poster' => $poster,
-                                'douban_score' => $data['vote_average'] ?? '',
-                                'card_subtitle' => $data['overview'] ?? ''
-                            ];
+                            if ($status_code == 200) {
+                                $data = json_decode(wp_remote_retrieve_body($response), true);
+                                
+                                if ($data) {
+                                    $status_map = ['complete' => 'done', 'progress' => 'doing', 'wishlist' => 'mark', 'dropped' => 'dropped'];
+                                    
+                                    $fresh_data = (object) [
+                                        'create_time' => isset($data['created_time']) ? date('Y-m-d H:i:s', strtotime($data['created_time'])) : '',
+                                        'status' => $status_map[$data['shelf_type']] ?? 'done',
+                                        'remark' => $data['comment_text'] ?? '',
+                                        'score' => $data['rating_grade'] ?? ''
+                                    ];
+                                }
+                            } else if ($status_code == 404) {
+                                return ['success' => false, 'message' => '您尚未在NeoDB标记此条目'];
+                            } else {
+                                return ['success' => false, 'message' => 'NeoDB API返回错误: ' . $status_code];
+                            }
                         } else {
-                            $debug_info['api_response'] = $data;
+                            return ['success' => false, 'message' => 'NeoDB API请求失败: ' . $response->get_error_message()];
                         }
                     } else {
-                        $debug_info['api_error'] = $response->get_error_message();
+                        return ['success' => false, 'message' => '需要配置NeoDB Token才能同步标记数据'];
                     }
-                }
-                break;
+                    break;
+            }
+        } else {
+            // edit_subject mode - fetch basic subject info
+            switch ($source) {
+                case 'douban':
+                    if ($subject->douban_id) {
+                        $type = $subject->type;
+                        if ($type == 'movie') {
+                            $link = $this->base_url . "movie/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                        } elseif ($type == 'book') {
+                            $link = $this->base_url . "book/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                        } elseif ($type == 'game') {
+                            $link = $this->base_url . "game/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                        } elseif ($type == 'drama') {
+                            $link = $this->base_url . "drama/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                        } else {
+                            $link = $this->base_url . "music/" . $subject->douban_id . "?ck=xgtY&for_mobile=1";
+                        }
+                        
+                        $response = wp_remote_get($link, ['sslverify' => false]);
+                        if (!is_wp_error($response)) {
+                            $data = json_decode(wp_remote_retrieve_body($response), true);
+                            if ($data) {
+                                $fresh_data = (object) [
+                                    'name' => $data['title'],
+                                    'poster' => $data['pic']['large'],
+                                    'douban_score' => $data['rating']['value'],
+                                    'card_subtitle' => $data['card_subtitle']
+                                ];
+                            }
+                        }
+                    }
+                    break;
+                case 'neodb':
+                    if ($subject->neodb_id) {
+                        $neodb_type_map = ['movie' => 'movie', 'book' => 'book', 'music' => 'album', 'game' => 'game', 'drama' => 'performance'];
+                        $neodb_type = $neodb_type_map[$subject->type] ?? 'movie';
+                        $url = "https://neodb.social/api/{$neodb_type}/" . $subject->neodb_id;
+                        
+                        $response = wp_remote_get($url, ['sslverify' => false]);
+                        if (!is_wp_error($response)) {
+                            $data = json_decode(wp_remote_retrieve_body($response), true);
+                            if ($data && !isset($data['error'])) {
+                                $fresh_data = (object) [
+                                    'name' => $data['title'] ?? '',
+                                    'poster' => $data['cover_image_url'] ?? '',
+                                    'douban_score' => $data['rating'] ?? '',
+                                    'card_subtitle' => $data['brief'] ?? ''
+                                ];
+                            }
+                        }
+                    }
+                    break;
+                case 'tmdb':
+                    if ($subject->tmdb_id && $subject->tmdb_type) {
+                        $api_key = $this->db_get_setting('api_key');
+                        if ($subject->tmdb_type == 'movie') {
+                            $url = "https://api.themoviedb.org/3/movie/{$subject->tmdb_id}?api_key={$api_key}&language=zh-CN";
+                        } else {
+                            $url = "https://api.themoviedb.org/3/tv/{$subject->tmdb_id}?api_key={$api_key}&language=zh-CN";
+                        }
+                        
+                        $response = wp_remote_get($url, ['sslverify' => false]);
+                        if (!is_wp_error($response)) {
+                            $data = json_decode(wp_remote_retrieve_body($response), true);
+                            if ($data && !isset($data['success']) && !isset($data['status_code'])) {
+                                $title = isset($data['title']) ? $data['title'] : (isset($data['name']) ? $data['name'] : '');
+                                $poster = '';
+                                if (isset($data['poster_path']) && $data['poster_path']) {
+                                    $poster = "https://image.tmdb.org/t/p/original" . $data['poster_path'];
+                                }
+                                
+                                $fresh_data = (object) [
+                                    'name' => $title,
+                                    'poster' => $poster,
+                                    'douban_score' => $data['vote_average'] ?? '',
+                                    'card_subtitle' => $data['overview'] ?? ''
+                                ];
+                            }
+                        }
+                    }
+                    break;
+            }
         }
 
         if (!$fresh_data) {
-            return [
-                'success' => false,
-                'message' => 'Failed to fetch data from ' . $source,
-                'debug' => $debug_info
-            ];
+            return ['success' => false, 'message' => 'Failed to fetch data from ' . $source];
         }
 
-        return [
-            'success' => true,
-            'data' => [
+        // Build response based on action
+        $response_data = [];
+        if ($action == 'edit_fave') {
+            $response_data = [
+                'create_time' => $fresh_data->create_time ?? '',
+                'status' => $fresh_data->status ?? '',
+                'remark' => $fresh_data->remark ?? '',
+                'score' => $fresh_data->score ?? ''
+            ];
+        } else {
+            $response_data = [
                 'name' => $fresh_data->name ?? '',
                 'poster' => $fresh_data->poster ?? '',
                 'douban_score' => $fresh_data->douban_score ?? '',
                 'card_subtitle' => $fresh_data->card_subtitle ?? ''
-            ],
-            'source' => $source
-        ];
+            ];
+        }
+
+        return ['success' => true, 'data' => $response_data, 'source' => $source];
     }
 
     private function populate_db_movie_metadata($movie)

@@ -253,6 +253,7 @@ class Subject_List_Table extends \WP_List_Table
             'page'                  => 'subject_edit',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
+            'action' => 'edit_fave'
         );
         $link = add_query_arg($link, admin_url('admin.php'));
         $links[] = "<a href='" . esc_url($link) . "'>编辑</a>";

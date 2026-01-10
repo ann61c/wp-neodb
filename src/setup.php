@@ -24,9 +24,11 @@ function db_edit_subject_page()
     wp_enqueue_script('wpd-admin-subject-edit', WPD_URL . '/assets/js/admin-subject-edit.js', ['jquery'], WPD_VERSION, true);
 
     $subject_id = isset($_GET['subject_id']) ? intval($_GET['subject_id']) : 0;
+    $action = isset($_GET['action']) ? sanitize_text_field($_GET['action']) : 'edit_fave';
     wp_localize_script('wpd-admin-subject-edit', 'wpd_subject_edit', [
         'rest_url' => rest_url('wpd/v1/preview-source'),
         'subject_id' => $subject_id,
+        'action' => $action,
         'nonce' => wp_create_nonce('wp_rest')
     ]);
 

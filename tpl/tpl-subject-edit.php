@@ -25,25 +25,40 @@
                     </td>
                 </tr>
                 <?php
-                // Show source switcher if multiple IDs are available
+                // Show source switcher based on edit mode
                 $has_multiple_sources = false;
                 $available_sources = [];
-                if (!empty($subject->douban_id)) {
-                    $available_sources[] = ['name' => '豆瓣', 'id' => $subject->douban_id, 'param' => 'douban'];
+                
+                if ($action == 'edit_subject') {
+                    // For editing subject info, show all available sources
+                    if (!empty($subject->douban_id)) {
+                        $available_sources[] = ['name' => '豆瓣', 'id' => $subject->douban_id, 'param' => 'douban'];
+                    }
+                    if (!empty($subject->neodb_id)) {
+                        $available_sources[] = ['name' => 'NeoDB', 'id' => $subject->neodb_id, 'param' => 'neodb'];
+                    }
+                    if (!empty($subject->tmdb_id)) {
+                        $available_sources[] = ['name' => 'TMDB', 'id' => $subject->tmdb_id . ' (' . $subject->tmdb_type . ')', 'param' => 'tmdb'];
+                    }
+                } else {
+                    // For editing user favorites, only show NeoDB (it has user marking data)
+                    if (!empty($subject->neodb_id)) {
+                        $available_sources[] = ['name' => 'NeoDB', 'id' => $subject->neodb_id, 'param' => 'neodb'];
+                    }
                 }
-                if (!empty($subject->neodb_id)) {
-                    $available_sources[] = ['name' => 'NeoDB', 'id' => $subject->neodb_id, 'param' => 'neodb'];
-                }
-                if (!empty($subject->tmdb_id)) {
-                    $available_sources[] = ['name' => 'TMDB', 'id' => $subject->tmdb_id . ' (' . $subject->tmdb_type . ')', 'param' => 'tmdb'];
-                }
-                $has_multiple_sources = count($available_sources) > 1;
+                
+                // For edit_fave mode, show if there's any source; for edit_subject, show if multiple sources
+                $show_refresh = $action == 'edit_fave' ? count($available_sources) >= 1 : count($available_sources) > 1;
                 ?>
-                <?php if ($has_multiple_sources): ?>
+                <?php if ($show_refresh): ?>
                 <tr valign="top">
                     <th scope="row"><label>数据来源</label></th>
                     <td>
-                        <p>当前条目关联了多个数据源，点击按钮可预览该来源的数据：</p>
+                        <?php if ($action == 'edit_subject'): ?>
+                            <p>当前条目关联了多个数据源，点击按钮可预览该来源的数据：</p>
+                        <?php else: ?>
+                            <p>可以从以下数据源同步您的标记信息（观看时间、状态、短评、评分）：</p>
+                        <?php endif; ?>
                         <div class="refresh-row">
                             <?php foreach ($available_sources as $source): ?>
                                 <button type="button" class="button source-refresh-btn" 
@@ -53,7 +68,11 @@
                             <?php endforeach; ?>
                         </div>
                         <p class="description" style="margin-top: 8px;">
-                            💡 预览数据不会立即保存，您可以对比后再点击"Save Changes"保存
+                            <?php if ($action == 'edit_subject'): ?>
+                                💡 预览数据不会立即保存，您可以对比后再点击"Save Changes"保存
+                            <?php else: ?>
+                                💡 刷新后的数据会自动填入下方表单，您可以修改后再保存
+                            <?php endif; ?>
                         </p>
                     </td>
                 </tr>
@@ -93,6 +112,7 @@
                         <th scope="row"><label for="url">观看时间</label></th>
                         <td>
                             <input type="datetime" name="create_time" value="<?php echo $fave->create_time ?>" class="regular-text"></input>
+                            <button type="button" class="button revert-btn" data-field="create_time" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
                     <tr valign="top">
@@ -111,12 +131,14 @@
                         <th scope="row"><label for="url">短评</label></th>
                         <td>
                             <textarea name="remark" style="width: 600px;" rows="5" cols="30" placeholder="输入短评"><?php echo $fave->remark ?></textarea>
+                            <button type="button" class="button revert-btn" data-field="remark" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
                     <tr valign="top">
                         <th scope="row"><label for="url">评分</label></th>
                         <td>
                             <input name="score" type="number" value="<?php echo $fave->score ? $fave->score : '' ?>" min="0" max="10"></input>
+                            <button type="button" class="button revert-btn" data-field="score" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
                 <?php endif; ?>
