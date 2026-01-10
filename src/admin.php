@@ -49,8 +49,8 @@ class WPD_ADMIN extends WPD_Douban
 
         if (isset($_GET['wpd_action'])  && 'sync_subject' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
             $this->sync_subject($_GET['subject_id'], $_GET['subject_type']);
-            // wp_redirect($sendback);
-            //exit;
+            wp_redirect($sendback);
+            exit;
         }
 
 
