@@ -118,6 +118,67 @@ class WPD_ADMIN extends WPD_Douban
             exit;
         }
 
+        if (isset($_GET['wpd_action']) && 'refresh_from_source' === $_GET['wpd_action']) {
+            if (!wp_verify_nonce($_GET['_wpnonce'], 'refresh_source_' . $_GET['subject_id'])) {
+                wp_die('Security check failed');
+            }
+
+            global $wpdb;
+            $subject_id = intval($_GET['subject_id']);
+            $source = sanitize_text_field($_GET['source']);
+            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
+
+            if ($subject) {
+                // Fetch fresh data from the selected source
+                $fresh_data = null;
+                switch ($source) {
+                    case 'douban':
+                        if ($subject->douban_id) {
+                            $fresh_data = $this->fetch_subject($subject->douban_id, $subject->type);
+                        }
+                        break;
+                    case 'neodb':
+                        if ($subject->neodb_id) {
+                            // Determine NeoDB type from WP-Douban type
+                            $neodb_type_map = ['movie' => 'movie', 'book' => 'book', 'music' => 'album', 'game' => 'game', 'drama' => 'performance'];
+                            $neodb_type = $neodb_type_map[$subject->type] ?? 'movie';
+                            $fresh_data = $this->fetch_neodb_subject($subject->neodb_id, $neodb_type);
+                        }
+                        break;
+                    case 'tmdb':
+                        if ($subject->tmdb_id && $subject->tmdb_type) {
+                            $fresh_data = $this->fetch_tmdb_subject($subject->tmdb_id, $subject->tmdb_type);
+                        }
+                        break;
+                }
+
+                if ($fresh_data) {
+                    // Full update: manual refresh should overwrite existing data
+                    $update_data = [
+                        'name' => $fresh_data->name ?? $subject->name,
+                        'poster' => $fresh_data->poster ?? $subject->poster,
+                        'douban_score' => $fresh_data->douban_score ?? $subject->douban_score,
+                        'link' => $fresh_data->link ?? $subject->link,
+                        'year' => $fresh_data->year ?? $subject->year,
+                        'pubdate' => $fresh_data->pubdate ?? $subject->pubdate,
+                        'card_subtitle' => $fresh_data->card_subtitle ?? $subject->card_subtitle
+                    ];
+                    
+                    $wpdb->update($wpdb->douban_movies, $update_data, ['id' => $subject_id]);
+                    $this->add_log($subject->type, 'refresh', $source, "Refreshed subject ID {$subject_id} from {$source}");
+                }
+            }
+
+            // Redirect back to edit page
+            $link = add_query_arg([
+                'page' => 'subject_all',
+                'action' => 'edit_subject',
+                'subject_id' => $subject_id
+            ], admin_url('admin.php'));
+            wp_redirect($link);
+            exit;
+        }
+
         if (isset($_GET['wpd_action']) && 'delete_subject' === $_GET['wpd_action']) {
             global $wpdb;
             $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$_GET['subject_id']}'");
