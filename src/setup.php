@@ -40,6 +40,9 @@ function db_log_page()
 
 function db_all_subject_page()
 {
+    wp_enqueue_style('wpd-admin-delete', WPD_URL . '/assets/css/admin-delete.css', [], WPD_VERSION);
+    wp_enqueue_script('wpd-admin-delete', WPD_URL . '/assets/js/admin-delete.js', ['jquery'], WPD_VERSION, true);
+    
     @include WPD_PATH . '/tpl/tpl-subject-all.php';
 }
 

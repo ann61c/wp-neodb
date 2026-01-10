@@ -5,6 +5,7 @@ class WPD_ADMIN extends WPD_Douban
     public function __construct()
     {
         add_action('wp_ajax_wpd_import', [$this, 'import']);
+        add_action('wp_ajax_wpd_delete_subject', [$this, 'ajax_delete_subject']);
         add_action('init', [$this, 'action_handle_posts']);
     }
 
@@ -283,4 +284,53 @@ class WPD_ADMIN extends WPD_Douban
     //         'details' => $details
     //     ));
     // }
+
+    public function ajax_delete_subject()
+    {
+        // Verify nonce
+        $subject_id = intval($_POST['subject_id']);
+        check_ajax_referer('wpd_delete_subject_' . $subject_id, 'nonce');
+
+        global $wpdb;
+        $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$subject_id}'");
+        
+        if (!$subject) {
+            wp_send_json_error(['message' => '条目不存在']);
+            return;
+        }
+
+        // Remove cached images
+        $this->wpd_remove_images($subject->douban_id);
+        
+        // Also remove NeoDB and TMDB cached images if they exist
+        if ($subject->neodb_id) {
+            $this->wpd_remove_images('neodb_' . $subject->neodb_id);
+        }
+        if ($subject->tmdb_id) {
+            $this->wpd_remove_images('tmdb' . $subject->tmdb_id);
+        }
+
+        // Delete from faves table
+        $wpdb->delete(
+            $wpdb->douban_faves,
+            [
+                'subject_id' => $subject_id,
+                'type' => $subject->type,
+            ]
+        );
+
+        // Delete from movies table
+        $deleted = $wpdb->delete(
+            $wpdb->douban_movies,
+            [
+                'id' => $subject_id,
+            ]
+        );
+
+        if ($deleted) {
+            wp_send_json_success(['message' => '条目已删除']);
+        } else {
+            wp_send_json_error(['message' => '删除失败']);
+        }
+    }
 }

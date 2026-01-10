@@ -272,7 +272,13 @@ class Subject_ALL_Table extends \WP_List_Table
         $link = add_query_arg($link, admin_url('admin.php'));
         $link = wp_nonce_url($link, "wpd_subject_{$event->id}");
 
-        $links[] = "<a href='" . esc_url($link) . "'>删除</a>";
+        $links[] = sprintf(
+            "<a href='#' class='wpd-delete-subject' data-subject-id='%s' data-subject-name='%s' data-nonce='%s' data-fallback-url='%s'>删除</a>",
+            esc_attr($event->id),
+            esc_attr($event->name),
+            wp_create_nonce('wpd_delete_subject_' . $event->id),
+            esc_url($link)
+        );
 
         return $this->row_actions($links);
     }
