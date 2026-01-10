@@ -592,7 +592,7 @@ class WPD_Douban
                     );
                 }
                 $movie_id = $existing_movie->id;
-                $this->add_log($type, 'embed', 'tmdb', "merged with existing movie ID {$existing_movie->id}");
+                $this->add_log($type, 'embed', 'tmdb', "merged with existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
             } else {
                 // Insert new entry
                 $wpdb->insert($wpdb->douban_movies, $insert_data);
@@ -703,7 +703,7 @@ class WPD_Douban
                     );
                 }
                 $movie_id = $existing_movie->id;
-                $this->add_log($type, 'embed', 'douban', "merged with existing movie ID {$existing_movie->id}");
+                $this->add_log($type, 'embed', 'douban', "merged with existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
             } else {
                 // Insert new entry
                 $wpdb->insert($wpdb->douban_movies, $insert_data);
@@ -850,7 +850,7 @@ class WPD_Douban
                 );
             }
             $movie_id = $existing_movie->id;
-            $this->add_log($type, 'embed', 'neodb', "merged with existing movie ID {$existing_movie->id}");
+            $this->add_log($type, 'embed', 'neodb', "merged with existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
         } else {
             // Insert into database as new entry
             $wpdb->insert($wpdb->douban_movies, $insert_data);
