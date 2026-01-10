@@ -142,6 +142,7 @@ class WPD_Douban
         <div class="db--typeItem" data-status="mark">想看</div>
         <div class="db--typeItem" data-status="doing">在看</div>
         <div class="db--typeItem is-active" data-status="done">看过</div>
+        <div class="db--typeItem" data-status="dropped">不看了</div>
     </div>' : '';
         return '<section class="db--container"><nav class="db--nav">' . $nav . '
     </nav>
@@ -214,7 +215,16 @@ class WPD_Douban
         $data = [];
         foreach ($goods as $good) {
             if ($this->db_get_setting('download_image')) {
-                $good->poster = $this->wpd_save_images($good->douban_id, $good->poster);
+                $cache_id = $good->douban_id;
+                $cache_prefix = '';
+                if (!empty($good->neodb_id)) {
+                    $cache_id = $good->neodb_id;
+                    $cache_prefix = 'neodb_';
+                } elseif (!empty($good->tmdb_id)) {
+                    $cache_id = $good->tmdb_id;
+                    $cache_prefix = 'tmdb';
+                }
+                $good->poster = $this->wpd_save_images($cache_id, $good->poster, $cache_prefix);
             } else if (in_array($good->type, ['movie', 'book', 'music'])) {
                 $good->poster = "https://dou.img.lithub.cc/" . $type . "/" . $good->douban_id . ".jpg";
             }
@@ -722,7 +732,13 @@ class WPD_Douban
         $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' . $cover . '"></div>';
 
         if ($this->db_get_setting("show_remark") && $data->fav_time) {
-            $output .= '<div class="db--viewTime JiEun">Marked ' . $data->fav_time . '</div>';
+            $status_label = 'Marked';
+            if (isset($data->status)) {
+                $status_map = ['mark' => '想看', 'doing' => '在看', 'done' => '看过', 'dropped' => '不看了'];
+                $status_label = $status_map[$data->status] ?? 'Marked';
+            }
+            $score_text = $data->score ? ' ' . $data->score . '分' : '';
+            $output .= '<div class="db--viewTime JiEun">' . $data->fav_time . ' ' . $status_label . $score_text . '</div>';
         }
 
         $output .= '<div class="doulist-content"><div class="doulist-title"><a href="' . $data->link . '" class="cute" target="_blank" rel="external nofollow">' . $data->name . '</a></div>';

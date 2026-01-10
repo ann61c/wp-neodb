@@ -184,6 +184,8 @@ class Subject_List_Table extends \WP_List_Table
                     return '想看';
                 } else if ($item->status == 'doing') {
                     return '在看';
+                } else if ($item->status == 'dropped') {
+                    return '不看了';
                 }
 
             case 'poster':

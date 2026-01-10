@@ -63,6 +63,7 @@
                                 <option <?php if ($fave->status == 'done') echo 'selected="selected" '; ?>value="done">已看</option>
                                 <option <?php if ($fave->status == 'doing') echo 'selected="doing" '; ?>value="doing">在看</option>
                                 <option <?php if ($fave->status == 'mark') echo 'selected="mark" '; ?>value="mark">想看</option>
+                                <option <?php if ($fave->status == 'dropped') echo 'selected="dropped" '; ?>value="dropped">不看了</option>
                                 <option <?php if ($fave->status == '') echo 'selected="selected" '; ?>value="">取消标记</option>
                             </select>
                         </td>
