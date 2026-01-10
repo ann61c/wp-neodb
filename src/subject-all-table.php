@@ -356,7 +356,7 @@ class Subject_ALL_Table extends \WP_List_Table
         return array(
             'name'     => '标题',
             'poster' => '封面',
-            'douban_score' => '豆瓣评分',
+            'douban_score' => '评分',
             'genre' => '分类',
             'card_subtitle' => '描述',
             'tmdb_type' => '来源'

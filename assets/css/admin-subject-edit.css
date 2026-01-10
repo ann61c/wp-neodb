@@ -7,9 +7,11 @@
 }
 
 .source-refresh-btn {
-    padding: 2px 10px !important;
-    height: 30px !important;
-    line-height: 28px !important;
+    padding: 0 10px !important;
+}
+
+.refresh-row + p.description {
+    margin-top: 10px;
 }
 
 #wpd-snackbar {
@@ -58,11 +60,22 @@
     font-size: 12px;
     display: inline-block;
     color: #fff;
-    background-color: green;
     border-radius: 2px;
     line-height: 1;
     padding: 2px 3px;
     margin-left: 4px;
+}
+
+.db--titletag-douban {
+    background-color: #007722;
+}
+
+.db--titletag-neodb {
+    background-color: #9b51e0;
+}
+
+.db--titletag-tmdb {
+    background-color: #01b4e4;
 }
 
 .revert-btn {

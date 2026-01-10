@@ -19,7 +19,11 @@
                                     echo (is_file($e) ? home_url('/') . 'douban_cache/' . $type . $id . '.jpg' : $subject->poster); ?>" width="100" /></p>
                         <p><?php echo (is_file($e) ? '封面已缓存' : '因豆瓣原因，原始封面可能无法显示。'); ?></p>
                         <p><?php echo $subject->name; ?>
-                            <span class="db--titletag"><?php echo ($subject->neodb_id ? 'NeoDB' : ($subject->tmdb_id ? 'TMDB' : '豆瓣')); ?></span>
+                            <?php 
+                            $source_name = $subject->neodb_id ? 'NeoDB' : ($subject->tmdb_id ? 'TMDB' : '豆瓣');
+                            $source_class = $subject->neodb_id ? 'db--titletag-neodb' : ($subject->tmdb_id ? 'db--titletag-tmdb' : 'db--titletag-douban');
+                            ?>
+                            <span class="db--titletag <?php echo $source_class; ?>"><?php echo $source_name; ?></span>
                         </p>
                         <p><?php echo $subject->card_subtitle; ?></p>
                     </td>
@@ -67,7 +71,7 @@
                                 </button>
                             <?php endforeach; ?>
                         </div>
-                        <p class="description" style="margin-top: 8px;">
+                        <p class="description">
                             <?php if ($action == 'edit_subject'): ?>
                                 💡 预览数据不会立即保存，您可以对比后再点击"Save Changes"保存
                             <?php else: ?>
@@ -101,7 +105,7 @@
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row"><label for="url">豆瓣评分</label></th>
+                        <th scope="row"><label for="url">评分</label></th>
                         <td>
                             <input type="text" name="douban_score" value="<?php echo $subject->douban_score ?>" class="regular-text">
                             <button type="button" class="button revert-btn" data-field="douban_score" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
