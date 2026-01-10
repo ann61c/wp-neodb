@@ -12,33 +12,6 @@ class db_sync extends WPD_Douban
         add_action('db_sync', [$this, 'db_sync_data']);
     }
 
-    private function get_genre_mapping()
-    {
-        return [
-            'Animation' => '动画',
-            'Sci-Fi' => '科幻',
-            'Mystery' => '悬疑',
-            'Action' => '动作',
-            'Comedy' => '喜剧',
-            'Romance' => '爱情',
-            'Thriller' => '惊悚',
-            'Crime' => '犯罪',
-            'Adventure' => '冒险',
-            'Fantasy' => '奇幻',
-            'Drama' => '剧情',
-            'Horror' => '恐怖',
-            'War' => '战争',
-            'Documentary' => '纪录片',
-            'Biography' => '传记',
-            'History' => '历史',
-            'Family' => '家庭',
-            'Musical' => '音乐',
-            'Sport' => '运动',
-            'Western' => '西部',
-            'Suspense' => '悬疑',
-        ];
-    }
-
     public function db_fecth($start = 0, $type = 'movie', $status = '')
     {
         $url = "{$this->base_url}user/{$this->uid}/interests?count=49&start={$start}&type={$type}&status={$status}";
@@ -114,7 +87,7 @@ class db_sync extends WPD_Douban
         ];
 
         $categories = ['book', 'movie', 'tv', 'music', 'game', 'performance'];
-        $sync_count = 0;
+        $processed_count = 0;
 
         foreach ($shelf_status_map as $shelf_type => $wpd_status) {
             foreach ($categories as $category) {
@@ -170,21 +143,7 @@ class db_sync extends WPD_Douban
 
                             if ($wpdb->insert_id) {
                                 $movie_id = $wpdb->insert_id;
-                                $sync_count++;
-                                $last_synced_name = $item['display_title'] ?? $item['title'];
-
-                                // Insert genres
-                                if (isset($item['genre']) && is_array($item['genre'])) {
-                                    $genre_map = $this->get_genre_mapping();
-                                    foreach ($item['genre'] as $genre) {
-                                        $final_genre = isset($genre_map[$genre]) ? $genre_map[$genre] : $genre;
-                                        $wpdb->insert($wpdb->douban_genres, [
-                                            'movie_id' => $movie_id,
-                                            'name' => $final_genre,
-                                            'type' => $wpd_type,
-                                        ]);
-                                    }
-                                }
+                                $processed_count++;
 
                                 // Insert fave record
                                 $wpdb->insert($wpdb->douban_faves, [
@@ -199,6 +158,7 @@ class db_sync extends WPD_Douban
                         } else {
                             // Item exists, check/update fave record
                             $movie_id = $movie->id;
+
                             $fav = $wpdb->get_row($wpdb->prepare(
                                 "SELECT * FROM $wpdb->douban_faves WHERE subject_id = %d",
                                 $movie_id
@@ -214,8 +174,7 @@ class db_sync extends WPD_Douban
                                     'type' => $wpd_type,
                                     'status' => $wpd_status,
                                 ]);
-                                $sync_count++;
-                                $last_synced_name = $item['display_title'] ?? $item['title'];
+                                $processed_count++;
                             } else if ($fav->status != $wpd_status || $fav->remark != ($mark['comment_text'] ?? '')) {
                                 // Update existing fave if status or comment changed
                                 $wpdb->update($wpdb->douban_faves, [
@@ -224,6 +183,7 @@ class db_sync extends WPD_Douban
                                     'score' => $mark['rating_grade'] ?? '',
                                     'status' => $wpd_status,
                                 ], ['id' => $fav->id]);
+                                $processed_count++;
                             }
                         }
                     }
@@ -236,12 +196,11 @@ class db_sync extends WPD_Douban
         }
 
         // Log the sync
-        if ($sync_count > 0) {
-            $log_message = $sync_count == 1 ? "synced {$last_synced_name}" : "synced {$sync_count} items";
-            $this->add_log('mixed', 'sync', 'neodb', $log_message);
+        if ($processed_count > 0) {
+            $this->add_log('batch', 'sync', 'neodb', "processed {$processed_count} items");
         }
 
-        return $sync_count;
+        return $processed_count;
     }
 
     public function db_sync_data()

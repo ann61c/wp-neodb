@@ -31,6 +31,33 @@ class WPD_Douban
         add_action('wp_head', [$this, 'db_custom_style']);
     }
 
+    protected function get_genre_mapping()
+    {
+        return [
+            'Animation' => '动画',
+            'Sci-Fi' => '科幻',
+            'Mystery' => '悬疑',
+            'Action' => '动作',
+            'Comedy' => '喜剧',
+            'Romance' => '爱情',
+            'Thriller' => '惊悚',
+            'Crime' => '犯罪',
+            'Adventure' => '冒险',
+            'Fantasy' => '奇幻',
+            'Drama' => '剧情',
+            'Horror' => '恐怖',
+            'War' => '战争',
+            'Documentary' => '纪录片',
+            'Biography' => '传记',
+            'History' => '历史',
+            'Family' => '家庭',
+            'Musical' => '音乐',
+            'Sport' => '运动',
+            'Western' => '西部',
+            'Suspense' => '悬疑',
+        ];
+    }
+
     public function add_log($type = 'movie', $action = 'sync', $source = 'douban', $message = '')
     {
         global $wpdb;
@@ -376,6 +403,27 @@ class WPD_Douban
                     'link' => $data['url'] ?? '',
                     'card_subtitle' => $description,
                 ], ['id' => $movie->id]);
+
+                // Update genres
+                if (isset($data['genre']) && is_array($data['genre'])) {
+                    // Delete existing genres
+                    $wpdb->delete($wpdb->douban_genres, ['movie_id' => $movie->id]);
+                    
+                    $genre_map = $this->get_genre_mapping();
+                    foreach ($data['genre'] as $genre) {
+                        $final_genre = isset($genre_map[$genre]) ? $genre_map[$genre] : $genre;
+                        $wpdb->insert($wpdb->douban_genres, [
+                            'movie_id' => $movie->id,
+                            'name' => $final_genre,
+                            'type' => $movie->type,
+                        ]);
+                    }
+                }
+
+                // Log the sync
+                $item_name = $data['display_title'] ?? $data['title'];
+                $this->add_log($movie->type, 'sync', 'neodb', "synced {$item_name}");
+
                 return true;
             }
             return false;

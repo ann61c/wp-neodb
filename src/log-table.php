@@ -84,6 +84,16 @@ class Log_Table extends \WP_List_Table
     {
         switch ($column_name) {
             case 'type':
+                $type_labels = [
+                    'batch' => '批量',
+                    'movie' => '电影',
+                    'book' => '图书',
+                    'music' => '音乐',
+                    'game' => '游戏',
+                    'drama' => '舞台剧',
+                    'podcast' => '播客',
+                ];
+                return $type_labels[$item->type] ?? $item->type;
             case 'status':
             case 'message':
             case 'create_time':

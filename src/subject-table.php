@@ -177,6 +177,8 @@ class Subject_List_Table extends \WP_List_Table
     public function column_default($item, $column_name)
     {
         switch ($column_name) {
+            case 'genre':
+                return $this->get_genres($item->id);
             case 'status':
                 if ($item->status == 'done') {
                     return '已看';
@@ -264,11 +266,22 @@ class Subject_List_Table extends \WP_List_Table
             'poster' => '封面',
             'tmdb_type' => '来源',
             'douban_score' => '评分',
+            'genre' => '分类',
             'card_subtitle' => '描述',
             'create_time' => '时间',
             'status' => '状态',
             'remark' => '我的短评',
             'score' => '我的评分'
         );
+    }
+
+    protected function get_genres($movie_id) {
+        global $wpdb;
+        $genres = $wpdb->get_results("SELECT name FROM $wpdb->douban_genres WHERE movie_id = $movie_id");
+        $names = [];
+        foreach ($genres as $g) {
+            $names[] = $g->name;
+        }
+        return implode(', ', $names);
     }
 }
