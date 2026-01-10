@@ -130,7 +130,8 @@ class Subject_List_Table extends \WP_List_Table
         global $wpdb;
         $filter = $type && $type != 'all' ? " AND f.type = '{$type}'" : '';
         $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
-        $subjects = $wpdb->get_results("SELECT m.id FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE f.status = 'done'{$filter}");
+        $filter .= !empty($_GET['status']) ? " f.status = '{$_GET['status']}'" : "";
+        $subjects = $wpdb->get_results("SELECT f.id FROM $wpdb->douban_faves f LEFT JOIN $wpdb->douban_movies m ON f.subject_id = m.id WHERE 1=1{$filter}");
         return count($subjects);
     }
 
@@ -198,6 +199,11 @@ class Subject_List_Table extends \WP_List_Table
                 if ($item->neodb_id) return 'NeoDB';
                 return $item->$column_name ? 'TMDB' : '豆瓣';
             case 'name':
+                $out = $item->name;
+                if (!empty($item->is_top250)) {
+                    $out .= ' <span style="background:#ffac2d;color:#fff;padding:1px 3px;border-radius:2px;font-size:10px;">Top250</span>';
+                }
+                return $out;
             case 'douban_score':
             case 'card_subtitle':
             case 'remark':
