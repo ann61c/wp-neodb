@@ -102,7 +102,7 @@ class Subject_ALL_Table extends \WP_List_Table
          */
         $types = apply_filters('crontrol/filter-types', $types, $hooks_type);
 
-        $url = admin_url('admin.php?page=subject');
+        $url = admin_url('admin.php?page=subject_all');
 
         /**
          * @var array<string,string> $types
@@ -183,6 +183,8 @@ class Subject_ALL_Table extends \WP_List_Table
             case 'create_time':
             case 'score':
                 return $item->$column_name;
+            case 'genre':
+                return $this->get_genres($item->id);
 
             case 'poster':
                 $cache_prefix = $item->neodb_id ? 'neodb_' : ($item->tmdb_type ? 'tmdb' : '');
@@ -216,7 +218,7 @@ class Subject_ALL_Table extends \WP_List_Table
         $links = array();
 
         $link = array(
-            'page'                  => 'subject',
+            'page'                  => 'subject_all',
             'wpd_action'       => !empty($fave) ? 'cancel_mark' : 'mark',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
@@ -275,8 +277,19 @@ class Subject_ALL_Table extends \WP_List_Table
             'name'     => '标题',
             'poster' => '封面',
             'douban_score' => '豆瓣评分',
+            'genre' => '分类',
             'card_subtitle' => '描述',
             'tmdb_type' => '来源'
         );
+    }
+
+    protected function get_genres($movie_id) {
+        global $wpdb;
+        $genres = $wpdb->get_results("SELECT name FROM $wpdb->douban_genres WHERE movie_id = $movie_id");
+        $names = [];
+        foreach ($genres as $g) {
+            $names[] = $g->name;
+        }
+        return implode(', ', $names);
     }
 }
