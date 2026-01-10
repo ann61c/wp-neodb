@@ -59,10 +59,24 @@ class Log_Table extends \WP_List_Table
         global $wpdb;
 
         $currentPage = $this->get_pagenum();
-
         $offset = ($currentPage - 1) * 40;
 
-        $subjects = $wpdb->get_results("SELECT * FROM $wpdb->douban_log ORDER BY create_time DESC LIMIT 40 OFFSET {$offset}");
+        // Sorting
+        $orderby = !empty($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'create_time';
+        $order = !empty($_GET['order']) ? strtolower(sanitize_text_field($_GET['order'])) : 'desc';
+
+        // Whitelist orderby
+        $sortable = $this->get_sortable_columns();
+        if (!array_key_exists($orderby, $sortable)) {
+            $orderby = 'create_time';
+        }
+
+        // Validate order
+        if (!in_array($order, ['asc', 'desc'])) {
+            $order = 'desc';
+        }
+
+        $subjects = $wpdb->get_results("SELECT * FROM $wpdb->douban_log ORDER BY {$orderby} {$order} LIMIT 40 OFFSET {$offset}");
 
         $this->items = $subjects;
 
@@ -70,6 +84,17 @@ class Log_Table extends \WP_List_Table
             'total_items' => $this->get_subject_count(),
             'per_page'    => 40,
         ));
+    }
+
+    public function get_sortable_columns()
+    {
+        return array(
+            'type'        => array('type', false),
+            'action'      => array('action', false),
+            'status'      => array('status', false),
+            'create_time' => array('create_time', true),
+            'account_id'  => array('account_id', false),
+        );
     }
 
 

@@ -59,25 +59,84 @@ class Subject_ALL_Table extends \WP_List_Table
         global $wpdb;
 
         $currentPage = $this->get_pagenum();
-
         $offset = ($currentPage - 1) * 40;
 
-        $filter = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? " AND m.type = '{$_GET['subject_type']}'" : '';
-        $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
+        $subject_type = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? sanitize_text_field($_GET['subject_type']) : '';
+        $search = !empty($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+        
+        // Sorting
+        $orderby = !empty($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'id';
+        $order = !empty($_GET['order']) ? strtolower(sanitize_text_field($_GET['order'])) : 'desc';
+
+        // Whitelist orderby
+        $sortable = $this->get_sortable_columns();
+        if (!array_key_exists($orderby, $sortable)) {
+            $orderby = 'id';
+        }
+
+        // Validate order
+        if (!in_array($order, ['asc', 'desc'])) {
+            $order = 'desc';
+        }
+
+        // Map column names to table fields
+        $order_field = $orderby;
+        if ($orderby == 'name') {
+            $order_field = 'm.name';
+        } elseif ($orderby == 'douban_score') {
+            $order_field = 'm.douban_score';
+        } elseif ($orderby == 'create_time') {
+            $order_field = 'm.create_time';
+        } else {
+            $order_field = 'm.' . $orderby;
+        }
+
         $top250_id = $wpdb->get_var("SELECT id FROM $wpdb->douban_collection WHERE douban_id = 'movie_top250'");
         
+        $query = "SELECT m.*" . ($top250_id ? ", r.collection_id as is_top250" : "") . " FROM $wpdb->douban_movies m";
         if ($top250_id) {
-            $subjects = $wpdb->get_results("SELECT m.*, r.collection_id as is_top250 FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_relation r ON m.id = r.movie_id AND r.collection_id = $top250_id WHERE 1=1{$filter} ORDER BY m.id DESC LIMIT 40 OFFSET {$offset}");
-        } else {
-            $subjects = $wpdb->get_results("SELECT * FROM $wpdb->douban_movies m WHERE 1=1{$filter} ORDER BY m.id DESC LIMIT 40 OFFSET {$offset}");
+            $query .= " LEFT JOIN $wpdb->douban_relation r ON m.id = r.movie_id AND r.collection_id = $top250_id";
         }
+        $query .= " WHERE 1=1";
+        
+        $params = [];
+
+        if ($subject_type) {
+            $query .= " AND m.type = %s";
+            $params[] = $subject_type;
+        }
+        if ($search) {
+            $query .= " AND m.name LIKE %s";
+            $params[] = '%' . $wpdb->esc_like($search) . '%';
+        }
+
+
+
+        $query .= " ORDER BY {$order_field} {$order} LIMIT 40 OFFSET {$offset}";
+
+        $subjects = $wpdb->get_results($wpdb->prepare($query, $params));
 
         $this->items = $subjects;
 
         $this->set_pagination_args(array(
-            'total_items' => $this->get_subject_count($_GET['subject_type']),
+            'total_items' => $this->get_subject_count($subject_type),
             'per_page'    => 40,
         ));
+    }
+
+    /**
+     * Gets the names of the sortable columns.
+     *
+     * @return array<string,array<int,string|bool>> Array of sortable columns.
+     */
+    public function get_sortable_columns()
+    {
+        return array(
+            'name'         => array('name', false),
+            'douban_score' => array('douban_score', false),
+            'create_time'  => array('create_time', false),
+            'id'           => array('id', true),
+        );
     }
 
     public function get_views()

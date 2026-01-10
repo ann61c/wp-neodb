@@ -59,20 +59,78 @@ class Subject_List_Table extends \WP_List_Table
         global $wpdb;
 
         $currentPage = $this->get_pagenum();
-
         $offset = ($currentPage - 1) * 40;
 
-        $filter = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? " AND f.type = '{$_GET['subject_type']}'" : '';
-        $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
-        $filter .= !empty($_GET['status']) ? " f.status = '{$_GET['status']}'" : "";
-        $subjects = $wpdb->get_results("SELECT m.*, f.create_time, f.remark, f.score , f.status FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE f.id IS NOT NULL{$filter} ORDER BY f.create_time DESC LIMIT 40 OFFSET {$offset}");
+        $subject_type = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? sanitize_text_field($_GET['subject_type']) : '';
+        $search = !empty($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+        $status = !empty($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+        
+        // Sorting
+        $orderby = !empty($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'create_time';
+        $order = !empty($_GET['order']) ? strtolower(sanitize_text_field($_GET['order'])) : 'desc';
+
+        // Whitelist orderby
+        $sortable = $this->get_sortable_columns();
+        if (!array_key_exists($orderby, $sortable)) {
+            $orderby = 'create_time';
+        }
+
+        // Validate order
+        if (!in_array($order, ['asc', 'desc'])) {
+            $order = 'desc';
+        }
+
+        // Map column names to table fields if necessary
+        $order_field = $orderby;
+        if ($orderby == 'create_time' || $orderby == 'status' || $orderby == 'score') {
+            $order_field = 'f.' . $orderby;
+        } elseif ($orderby == 'name') {
+            $order_field = 'm.name';
+        }
+
+        $query = "SELECT m.*, f.create_time, f.remark, f.score, f.status FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE f.id IS NOT NULL";
+        $params = [];
+
+        if ($subject_type) {
+            $query .= " AND f.type = %s";
+            $params[] = $subject_type;
+        }
+        if ($search) {
+            $query .= " AND m.name LIKE %s";
+            $params[] = '%' . $wpdb->esc_like($search) . '%';
+        }
+        if ($status) {
+            $query .= " AND f.status = %s";
+            $params[] = $status;
+        }
+
+
+
+        $query .= " ORDER BY {$order_field} {$order} LIMIT 40 OFFSET {$offset}";
+
+        $subjects = $wpdb->get_results($wpdb->prepare($query, $params));
 
         $this->items = $subjects;
 
         $this->set_pagination_args(array(
-            'total_items' => $this->get_subject_count($_GET['subject_type']),
+            'total_items' => $this->get_subject_count($subject_type),
             'per_page'    => 40,
         ));
+    }
+
+    /**
+     * Gets the names of the sortable columns.
+     *
+     * @return array<string,array<int,string|bool>> Array of sortable columns.
+     */
+    public function get_sortable_columns()
+    {
+        return array(
+            'name'        => array('name', false),
+            'status'      => array('status', false),
+            'score'       => array('score', false),
+            'create_time' => array('create_time', true),
+        );
     }
 
     public function get_views()
@@ -217,6 +275,10 @@ class Subject_List_Table extends \WP_List_Table
             default:
                 return print_r($item, true);
         }
+    }
+
+    protected function extra_tablenav($which)
+    {
     }
 
     protected function column_cb($event)
