@@ -20,6 +20,16 @@ function db_setting_group()
 
 function db_edit_subject_page()
 {
+    wp_enqueue_style('wpd-admin-subject-edit', WPD_URL . '/assets/css/admin-subject-edit.css', [], WPD_VERSION);
+    wp_enqueue_script('wpd-admin-subject-edit', WPD_URL . '/assets/js/admin-subject-edit.js', ['jquery'], WPD_VERSION, true);
+
+    $subject_id = isset($_GET['subject_id']) ? intval($_GET['subject_id']) : 0;
+    wp_localize_script('wpd-admin-subject-edit', 'wpd_subject_edit', [
+        'rest_url' => rest_url('wpd/v1/preview-source'),
+        'subject_id' => $subject_id,
+        'nonce' => wp_create_nonce('wp_rest')
+    ]);
+
     @include WPD_PATH . '/tpl/tpl-subject-edit.php';
 }
 

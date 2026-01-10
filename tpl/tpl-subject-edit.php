@@ -24,29 +24,68 @@
                         <p><?php echo $subject->card_subtitle; ?></p>
                     </td>
                 </tr>
+                <?php
+                // Show source switcher if multiple IDs are available
+                $has_multiple_sources = false;
+                $available_sources = [];
+                if (!empty($subject->douban_id)) {
+                    $available_sources[] = ['name' => '豆瓣', 'id' => $subject->douban_id, 'param' => 'douban'];
+                }
+                if (!empty($subject->neodb_id)) {
+                    $available_sources[] = ['name' => 'NeoDB', 'id' => $subject->neodb_id, 'param' => 'neodb'];
+                }
+                if (!empty($subject->tmdb_id)) {
+                    $available_sources[] = ['name' => 'TMDB', 'id' => $subject->tmdb_id . ' (' . $subject->tmdb_type . ')', 'param' => 'tmdb'];
+                }
+                $has_multiple_sources = count($available_sources) > 1;
+                ?>
+                <?php if ($has_multiple_sources): ?>
+                <tr valign="top">
+                    <th scope="row"><label>数据来源</label></th>
+                    <td>
+                        <p>当前条目关联了多个数据源，点击按钮可预览该来源的数据：</p>
+                        <div class="refresh-row">
+                            <?php foreach ($available_sources as $source): ?>
+                                <button type="button" class="button source-refresh-btn" 
+                                        data-source="<?php echo $source['param']; ?>">
+                                    从 <?php echo $source['name']; ?> 刷新 (ID: <?php echo $source['id']; ?>)
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                        <p class="description" style="margin-top: 8px;">
+                            💡 预览数据不会立即保存，您可以对比后再点击"Save Changes"保存
+                        </p>
+                    </td>
+                </tr>
+                <div id="wpd-snackbar" class="refresh-status"></div>
+                <?php endif; ?>
                 <?php if ($action == 'edit_subject') : ?>
                     <tr valign="top">
                         <th scope="row"><label for="url">海报地址</label></th>
                         <td>
-                            <input type="datetime" name="poster" value="<?php echo $subject->poster ?>" class="regular-text"></input>
+                            <input type="text" name="poster" value="<?php echo $subject->poster ?>" class="regular-text">
+                            <button type="button" class="button revert-btn" data-field="poster" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
                     <tr valign="top">
                         <th scope="row"><label for="url">名称</label></th>
                         <td>
-                            <input type="datetime" name="name" value="<?php echo $subject->name ?>" class="regular-text"></input>
+                            <input type="text" name="name" value="<?php echo $subject->name ?>" class="regular-text">
+                            <button type="button" class="button revert-btn" data-field="name" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
                     <tr valign="top">
                         <th scope="row"><label for="url">副标题</label></th>
                         <td>
-                            <input type="datetime" name="card_subtitle" value="<?php echo $subject->card_subtitle ?>" class="regular-text"></input>
+                            <input type="text" name="card_subtitle" value="<?php echo $subject->card_subtitle ?>" class="regular-text">
+                            <button type="button" class="button revert-btn" data-field="card_subtitle" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
                     <tr valign="top">
                         <th scope="row"><label for="url">豆瓣评分</label></th>
                         <td>
-                            <input type="datetime" name="douban_score" value="<?php echo $subject->douban_score ?>" class="regular-text"></input>
+                            <input type="text" name="douban_score" value="<?php echo $subject->douban_score ?>" class="regular-text">
+                            <button type="button" class="button revert-btn" data-field="douban_score" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>
                 <?php else : ?>
@@ -90,17 +129,5 @@
         <div class="nm-submit-form">
             <input type="submit" class="button-primary" name="save" value="<?php _e('Save Changes') ?>" />
         </div>
-        <style>
-            .db--titletag {
-                font-size: 12px;
-                display: inline-block;
-                color: #fff;
-                background-color: green;
-                border-radius: 2px;
-                line-height: 1;
-                padding: 2px 3px;
-                margin-left: 4px;
-            }
-        </style>
     </form>
 </div>

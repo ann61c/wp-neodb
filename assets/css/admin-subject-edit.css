@@ -1,0 +1,100 @@
+.refresh-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.source-refresh-btn {
+    padding: 2px 10px !important;
+    height: 30px !important;
+    line-height: 28px !important;
+}
+
+#wpd-snackbar {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    min-width: 250px;
+    background: #fff;
+    color: #2c3338;
+    padding: 12px 20px;
+    border-left: 4px solid #2271b1;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    border-radius: 4px;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#wpd-snackbar.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+#wpd-snackbar.error {
+    border-left-color: #d63638;
+}
+
+#wpd-snackbar.success {
+    border-left-color: #007017;
+}
+
+#wpd-snackbar .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 1;
+    margin: 0;
+}
+
+.db--titletag {
+    font-size: 12px;
+    display: inline-block;
+    color: #fff;
+    background-color: green;
+    border-radius: 2px;
+    line-height: 1;
+    padding: 2px 3px;
+    margin-left: 4px;
+}
+
+.revert-btn {
+    margin-left: 6px;
+    padding: 0 6px !important;
+    height: 30px !important;
+    line-height: normal !important;
+    min-width: 32px !important;
+    border-radius: 4px;
+    vertical-align: middle;
+    color: #666;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #c3c4c7;
+    background: #f6f7f7;
+}
+
+.revert-btn:hover {
+    color: #2271b1;
+    border-color: #2271b1;
+    background: #f0f6fb;
+}
+
+.revert-btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 1;
+}
+
+input.previewing, textarea.previewing {
+    background-color: #fffbcc !important;
+    border-color: #e6db55 !important;
+}
