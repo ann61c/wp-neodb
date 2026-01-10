@@ -63,6 +63,7 @@ class Subject_ALL_Table extends \WP_List_Table
 
         $subject_type = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? sanitize_text_field($_GET['subject_type']) : '';
         $search = !empty($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
+        $source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
         
         // Sorting
         $orderby = !empty($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'id';
@@ -109,8 +110,17 @@ class Subject_ALL_Table extends \WP_List_Table
             $query .= " AND m.name LIKE %s";
             $params[] = '%' . $wpdb->esc_like($search) . '%';
         }
-
-
+        
+        // Source filter
+        if ($source) {
+            if ($source === 'douban') {
+                $query .= " AND m.douban_id > 0";
+            } elseif ($source === 'neodb') {
+                $query .= " AND m.neodb_id != '' AND m.neodb_id IS NOT NULL";
+            } elseif ($source === 'tmdb') {
+                $query .= " AND m.tmdb_id > 0";
+            }
+        }
 
         $query .= " ORDER BY {$order_field} {$order} LIMIT 40 OFFSET {$offset}";
 
@@ -119,7 +129,7 @@ class Subject_ALL_Table extends \WP_List_Table
         $this->items = $subjects;
 
         $this->set_pagination_args(array(
-            'total_items' => $this->get_subject_count($subject_type),
+            'total_items' => $this->get_subject_count($subject_type, $source),
             'per_page'    => 40,
         ));
     }
@@ -189,31 +199,96 @@ class Subject_ALL_Table extends \WP_List_Table
         return $views;
     }
 
-    protected function get_subject_count($type)
+    protected function get_subject_count($type, $source = '')
     {
         global $wpdb;
         $filter = $type && $type != 'all' ? " AND m.type = '{$type}'" : '';
         $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
+        
+        // Source filter
+        if ($source) {
+            if ($source === 'douban') {
+                $filter .= " AND m.douban_id > 0";
+            } elseif ($source === 'neodb') {
+                $filter .= " AND m.neodb_id != '' AND m.neodb_id IS NOT NULL";
+            } elseif ($source === 'tmdb') {
+                $filter .= " AND m.tmdb_id > 0";
+            }
+        }
+        
         $subjects = $wpdb->get_results("SELECT m.id FROM $wpdb->douban_movies m  WHERE 1=1{$filter}");
         return count($subjects);
     }
+    
+    protected function get_source_count_for_filter($type, $source)
+    {
+        return $this->get_subject_count($type, $source);
+    }
 
-    // protected function extra_tablenav($which)
-    // {
-    //     wp_nonce_field('crontrol-export-event-csv', 'crontrol_nonce');
-    //     printf(
-    //         '<input type="hidden" name="crontrol_hooks_type" value="%s"/>',
-    //         esc_attr(isset($_GET['crontrol_hooks_type']) ? sanitize_text_field(wp_unslash($_GET['crontrol_hooks_type'])) : 'all')
-    //     );
-    //     printf(
-    //         '<input type="hidden" name="s" value="%s"/>',
-    //         esc_attr(isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '')
-    //     );
-    //     printf(
-    //         '<button class="button" type="submit" name="crontrol_action" value="export-event-csv">%s</button>',
-    //         esc_html__('Export', 'wp-crontrol')
-    //     );
-    // }
+    public function views()
+    {
+        $views = $this->get_views();
+        $source_views = $this->get_source_views();
+
+        if (empty($views) && empty($source_views)) {
+            return;
+        }
+
+        echo '<ul class="subsubsub">';
+        if (!empty($views)) {
+            echo '<li>' . implode(" |</li>\n<li>", $views) . '</li>';
+        }
+        echo '</ul>';
+        
+        if (!empty($source_views)) {
+            echo '<ul class="subsubsub">';
+            echo '<li>' . implode(" |</li>\n<li>", $source_views) . '</li>';
+            echo '</ul>';
+        }
+    }
+
+    protected function extra_tablenav($which)
+    {
+    }
+    
+    protected function get_source_views()
+    {
+        $current_source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
+        $subject_type = !empty($_GET['subject_type']) ? sanitize_text_field($_GET['subject_type']) : 'all';
+        
+        $base_url = admin_url('admin.php?page=subject_all');
+        if ($subject_type && $subject_type !== 'all') {
+            $base_url = add_query_arg('subject_type', $subject_type, $base_url);
+        }
+        
+        $source_filters = [
+            '' => '所有来源',
+            'douban' => '豆瓣',
+            'neodb' => 'NeoDB',
+            'tmdb' => 'TMDB'
+        ];
+        
+        $views = [];
+        foreach ($source_filters as $key => $label) {
+            $url = $base_url;
+            if ($key) {
+                $url = add_query_arg('source', $key, $url);
+            }
+            
+            $count = $this->get_source_count_for_filter($subject_type, $key);
+            
+            $views[$key ?: 'all_source'] = sprintf(
+                '<a href="%1$s"%2$s>%3$s <span class="count">(%4$s)</span></a>',
+                esc_url($url),
+                $current_source === $key ? ' class="current"' : '',
+                esc_html($label),
+                $count
+            );
+        }
+        
+        return $views;
+    }
+
 
     // private function table_data()
     // {
@@ -244,7 +319,7 @@ class Subject_ALL_Table extends \WP_List_Table
             case 'name':
                 $out = $item->name;
                 if (!empty($item->is_top250)) {
-                    $out .= ' <span style="background:#ffac2d;color:#fff;padding:1px 3px;border-radius:2px;font-size:10px;">Top250</span>';
+                    $out .= ' <span class="wpd-top250">Top250</span>';
                 }
                 return $out;
             case 'douban_score':

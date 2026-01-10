@@ -64,6 +64,7 @@ class Subject_List_Table extends \WP_List_Table
         $subject_type = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? sanitize_text_field($_GET['subject_type']) : '';
         $search = !empty($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
         $status = !empty($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+        $source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
         
         // Sorting
         $orderby = !empty($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'create_time';
@@ -103,6 +104,17 @@ class Subject_List_Table extends \WP_List_Table
             $query .= " AND f.status = %s";
             $params[] = $status;
         }
+        
+        // Source filter
+        if ($source) {
+            if ($source === 'douban') {
+                $query .= " AND m.douban_id > 0";
+            } elseif ($source === 'neodb') {
+                $query .= " AND m.neodb_id != '' AND m.neodb_id IS NOT NULL";
+            } elseif ($source === 'tmdb') {
+                $query .= " AND m.tmdb_id > 0";
+            }
+        }
 
 
 
@@ -113,7 +125,7 @@ class Subject_List_Table extends \WP_List_Table
         $this->items = $subjects;
 
         $this->set_pagination_args(array(
-            'total_items' => $this->get_subject_count($subject_type),
+            'total_items' => $this->get_subject_count($subject_type, $status, $source),
             'per_page'    => 40,
         ));
     }
@@ -183,14 +195,36 @@ class Subject_List_Table extends \WP_List_Table
         return $views;
     }
 
-    protected function get_subject_count($type)
+    protected function get_subject_count($type, $status = '', $source = '')
     {
         global $wpdb;
         $filter = $type && $type != 'all' ? " AND f.type = '{$type}'" : '';
         $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
-        $filter .= !empty($_GET['status']) ? " f.status = '{$_GET['status']}'" : "";
+        $filter .= $status ? " AND f.status = '{$status}'" : "";
+        
+        // Source filter
+        if ($source) {
+            if ($source === 'douban') {
+                $filter .= " AND m.douban_id > 0";
+            } elseif ($source === 'neodb') {
+                $filter .= " AND m.neodb_id != '' AND m.neodb_id IS NOT NULL";
+            } elseif ($source === 'tmdb') {
+                $filter .= " AND m.tmdb_id > 0";
+            }
+        }
+        
         $subjects = $wpdb->get_results("SELECT f.id FROM $wpdb->douban_faves f LEFT JOIN $wpdb->douban_movies m ON f.subject_id = m.id WHERE 1=1{$filter}");
         return count($subjects);
+    }
+    
+    protected function get_status_count($type, $status, $source = '')
+    {
+        return $this->get_subject_count($type, $status, $source);
+    }
+    
+    protected function get_source_count($type, $status, $source)
+    {
+        return $this->get_subject_count($type, $status, $source);
     }
 
     // protected function extra_tablenav($which)
@@ -262,7 +296,7 @@ class Subject_List_Table extends \WP_List_Table
             case 'name':
                 $out = $item->name;
                 if (!empty($item->is_top250)) {
-                    $out .= ' <span style="background:#ffac2d;color:#fff;padding:1px 3px;border-radius:2px;font-size:10px;">Top250</span>';
+                    $out .= ' <span class="wpd-top250">Top250</span>';
                 }
                 return $out;
             case 'douban_score':
@@ -277,8 +311,122 @@ class Subject_List_Table extends \WP_List_Table
         }
     }
 
+    public function views()
+    {
+        $views = $this->get_views();
+        $status_views = $this->get_status_views();
+        $source_views = $this->get_source_views();
+
+        if (empty($views) && empty($status_views) && empty($source_views)) {
+            return;
+        }
+
+        echo '<ul class="subsubsub">';
+        if (!empty($views)) {
+            echo '<li>' . implode(" |</li>\n<li>", $views) . '</li>';
+        }
+        echo '</ul>';
+        
+        if (!empty($status_views)) {
+            echo '<ul class="subsubsub">';
+            echo '<li>' . implode(" |</li>\n<li>", $status_views) . '</li>';
+            echo '</ul>';
+        }
+        
+        if (!empty($source_views)) {
+            echo '<ul class="subsubsub">';
+            echo '<li>' . implode(" |</li>\n<li>", $source_views) . '</li>';
+            echo '</ul>';
+        }
+    }
+
     protected function extra_tablenav($which)
     {
+    }
+    
+    protected function get_status_views()
+    {
+        $current_status = !empty($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+        $current_source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
+        $subject_type = !empty($_GET['subject_type']) ? sanitize_text_field($_GET['subject_type']) : 'all';
+        
+        $base_url = admin_url('admin.php?page=subject');
+        if ($subject_type && $subject_type !== 'all') {
+            $base_url = add_query_arg('subject_type', $subject_type, $base_url);
+        }
+        if ($current_source) {
+            $base_url = add_query_arg('source', $current_source, $base_url);
+        }
+        
+        $status_filters = [
+            '' => '所有状态',
+            'mark' => '想看',
+            'doing' => '在看',
+            'done' => '已看',
+            'dropped' => '不看了'
+        ];
+        
+        $views = [];
+        foreach ($status_filters as $key => $label) {
+            $url = $base_url;
+            if ($key) {
+                $url = add_query_arg('status', $key, $url);
+            }
+            
+            $count = $this->get_status_count($subject_type, $key, $current_source);
+            
+            $views[$key ?: 'all_status'] = sprintf(
+                '<a href="%1$s"%2$s>%3$s <span class="count">(%4$s)</span></a>',
+                esc_url($url),
+                $current_status === $key ? ' class="current"' : '',
+                esc_html($label),
+                $count
+            );
+        }
+        
+        return $views;
+    }
+    
+    protected function get_source_views()
+    {
+        $current_status = !empty($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
+        $current_source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
+        $subject_type = !empty($_GET['subject_type']) ? sanitize_text_field($_GET['subject_type']) : 'all';
+        
+        $base_url = admin_url('admin.php?page=subject');
+        if ($subject_type && $subject_type !== 'all') {
+            $base_url = add_query_arg('subject_type', $subject_type, $base_url);
+        }
+        if ($current_status) {
+            $base_url = add_query_arg('status', $current_status, $base_url);
+        }
+        
+        $source_filters = [
+            '' => '所有来源',
+            'douban' => '豆瓣',
+            'neodb' => 'NeoDB',
+            'tmdb' => 'TMDB'
+        ];
+        
+        $views = [];
+        foreach ($source_filters as $key => $label) {
+            $url = $base_url;
+            if ($key) {
+                $url = add_query_arg('source', $key, $url);
+            }
+            
+            $count = $this->get_source_count($subject_type, $current_status, $key);
+            
+            $views[$key ?: 'all_source'] = sprintf(
+                '<a href="%1$s"%2$s>%3$s <span class="count">(%4$s)</span></a>',
+                esc_url($url),
+                $current_source === $key ? ' class="current"' : '',
+                esc_html($label),
+                $count
+            );
+        }
+        
+        return $views;
     }
 
     protected function column_cb($event)
