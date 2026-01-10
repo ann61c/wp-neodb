@@ -82,7 +82,8 @@ function wpd_install()
         "name varchar(256) default ''," .
         "poster varchar(256) default ''," .
         "douban_id varchar(32) default ''," .
-        "PRIMARY KEY  (id)" .
+        "PRIMARY KEY  (id)," .
+        "KEY douban_id (douban_id)" .
         ") $charset_collate;";
 
     $create_table['douban_faves'] = "CREATE TABLE $wpdb->douban_faves (" .
@@ -93,7 +94,10 @@ function wpd_install()
         "type varchar(16) default ''," .
         "score varchar(16) default ''," .
         "status varchar(16) default ''," .
-        "PRIMARY KEY  (id)" .
+        "PRIMARY KEY  (id)," .
+        "KEY subject_id (subject_id)," .
+        "KEY type (type)," .
+        "KEY status (status)" .
         ") $charset_collate;";
 
     $create_table['douban_genres'] = "CREATE TABLE $wpdb->douban_genres (" .
@@ -101,7 +105,8 @@ function wpd_install()
         "movie_id int(10) default 0," .
         "name varchar(16) default ''," .
         "type varchar(16) default 'movie'," .
-        "PRIMARY KEY  (id)" .
+        "PRIMARY KEY  (id)," .
+        "KEY movie_id (movie_id)" .
         ") $charset_collate;";
 
     $create_table['douban_movies'] = "CREATE TABLE $wpdb->douban_movies (" .
@@ -119,14 +124,21 @@ function wpd_install()
         "card_subtitle varchar(256)," .
         "tmdb_id int," .
         "tmdb_type varchar(16)," .
-        "PRIMARY KEY (id)" .
+        "neodb_id varchar(64)," .
+        "PRIMARY KEY (id)," .
+        "KEY douban_id (douban_id)," .
+        "KEY neodb_id (neodb_id)," .
+        "KEY tmdb_id (tmdb_id)," .
+        "KEY type (type)" .
         ") $charset_collate;";
 
     $create_table['douban_relation'] = "CREATE TABLE $wpdb->douban_relation (" .
         "id int(10) NOT NULL auto_increment," .
         "movie_id int default 0," .
         "collection_id int default 0," .
-        "PRIMARY KEY  (id)" .
+        "PRIMARY KEY  (id)," .
+        "KEY movie_id (movie_id)," .
+        "KEY collection_id (collection_id)" .
         ") $charset_collate;";
 
     $create_table['douban_log'] = "CREATE TABLE $wpdb->douban_log (" .
