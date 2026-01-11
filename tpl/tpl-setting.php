@@ -1,60 +1,51 @@
 <div class="wrap">
     <h2>插件设置</h2>
+    <p>请查看 <a href="https://fatesinger.com/101050" target="_blank">帮助文章</a> 了解更多使用详情。</p>
     <form method="post" action="options.php">
         <?php
         settings_fields('db_setting_group');
         ?>
+        <h3>账号设置</h3>
         <table class="form-table">
             <tbody>
                 <tr valign="top">
-                    <th scope="row"><label>使用方法</label></th>
+                    <th scope="row"><label for="<?php echo db_setting_key('neodb_url'); ?>">NeoDB 实例地址</label></th>
                     <td>
-                        <p>请查看<a href="https://fatesinger.com/101050" target="_blank">帮助文章</a></p>
+                        <input name="<?php echo db_setting_key('neodb_url'); ?>" type="text" value="<?php echo db_get_setting('neodb_url') ?: 'https://neodb.social'; ?>" class="regular-text" />
                     </td>
                 </tr>
                 <tr valign="top">
-                    <th scope="row"><label>显示设置</label></th>
+                    <th scope="row"><label for="<?php echo db_setting_key('neodb_token'); ?>">NeoDB Token (可选)</label></th>
                     <td>
-                        <ul class="wpn-color-ul">
-                            <?php $color = [
-                                [
-                                    'title' => '帐号ID',
-                                    'key' => 'id',
-                                    'default' => ''
-                                ],
-                                [
-                                    'title' => '每页显示条目数',
-                                    'key' => 'perpage',
-                                    'default' => '70'
-                                ],
-                                [
-                                    'title' => 'TMDB API Key',
-                                    'key' => 'api_key',
-                                    'default' => ''
-                                ],
-                                [
-                                    'title' => 'NeoDB 实例地址',
-                                    'key' => 'neodb_url',
-                                    'default' => 'https://neodb.social'
-                                ],
-                                [
-                                    'title' => 'NeoDB Token (可选)',
-                                    'key' => 'neodb_token',
-                                    'default' => ''
-                                ]
-                            ];
-                            foreach ($color as $V) {
-                                ?>
-                            <li class="wpn-color-li">
-                                <code><?php echo $V['title']; ?></code>
-                                <?php $color = db_get_setting($V['key']) ?: $V['default']; ?>
-                                    <input name="<?php echo db_setting_key($V['key']); ?>" type="text" value="<?php echo $color; ?>" class="regular-text wpn-color-picker" />
-                            </li>
-                            <?php }
-                            ?>
-                        </ul>
-                        <p class="description">点击你的个人主页，URL类似为<code>https://www.douban.com/people/54529369/</code>，<code>54529369</code>就是你的ID</p>
-                        <p class="description">设置<code>TMDB API Key</code>在https://www.themoviedb.org/settings/api 自行申请</p>
+                        <input name="<?php echo db_setting_key('neodb_token'); ?>" type="text" value="<?php echo db_get_setting('neodb_token'); ?>" class="regular-text" />
+                        <p class="description">可在 <a href="https://neodb.social/developer/" target="_blank">https://neodb.social/developer/</a> 点击 <code>Test Access Token</code> 后，点击 <code>Generate</code> 获取。</p>
+                        <p class="description">需要 NeoDB Token 才可从 NeoDB 获取你的书影音游戏等数据。文章页中显示来自 NeoDB 的数据不需要 Token。</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row"><label for="<?php echo db_setting_key('api_key'); ?>">TMDB API Key</label></th>
+                    <td>
+                        <input name="<?php echo db_setting_key('api_key'); ?>" type="text" value="<?php echo db_get_setting('api_key'); ?>" class="regular-text" />
+                        <p class="description">可在 <a href="https://www.themoviedb.org/settings/api" target="_blank">https://www.themoviedb.org/settings/api</a> 自行申请</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row"><label for="<?php echo db_setting_key('id'); ?>">豆瓣 ID</label></th>
+                    <td>
+                        <input name="<?php echo db_setting_key('id'); ?>" type="text" value="<?php echo db_get_setting('id'); ?>" class="regular-text" />
+                        <p class="description">点击你的个人主页，URL 类似为<code>https://www.douban.com/people/54529369/</code>，<code>54529369</code>就是你的 ID</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>显示设置</h3>
+        <table class="form-table">
+            <tbody>
+                <tr valign="top">
+                    <th scope="row"><label for="<?php echo db_setting_key('perpage'); ?>">每页显示条目数</label></th>
+                    <td>
+                        <input name="<?php echo db_setting_key('perpage'); ?>" type="text" value="<?php echo db_get_setting('perpage') ?: '70'; ?>" class="regular-text" />
                     </td>
                 </tr>
                 <tr valign="top">
@@ -75,13 +66,6 @@
                             <input type="radio" name="<?php echo db_setting_key('dark_mode'); ?>" id="mode-auto" value="auto" <?php if ($mode == 'auto') {
                                 echo 'checked="checked"';
                             } ?>>跟随系统</label>
-                    </td>
-                </tr>
-                <tr valign="top">
-                    <th scope="row"><label for="url">自定义CSS</label></th>
-                    <td>
-                        <textarea name="<?php echo db_setting_key('css'); ?>" class="wpn-textarea"><?php echo db_get_setting('css'); ?></textarea>
-                        <p class="description">请输入合法的CSS。</p>
                     </td>
                 </tr>
                 <tr valign="top">
@@ -117,6 +101,19 @@
                         <p class="description">默认只会在文章页自动渲染条目链接，开启后在非文章页也会渲染。</p>
                     </td>
                 </tr>
+                <tr valign="top">
+                    <th scope="row"><label for="url">自定义CSS</label></th>
+                    <td>
+                        <textarea name="<?php echo db_setting_key('css'); ?>" class="wpn-textarea"><?php echo db_get_setting('css'); ?></textarea>
+                        <p class="description">请输入合法的CSS。</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>高级设置</h3>
+        <table class="form-table">
+            <tbody>
                 <tr valign="top">
                     <th scope="row"><label for="<?php echo db_setting_key('download_image'); ?>">下载图片</label></th>
                     <td>
@@ -168,17 +165,6 @@
         </div>
     </form>
     <style>
-    .wpn-color-li {
-        position: relative;
-        padding-left: 160px;
-    }
-
-    .wpn-color-li code {
-        position: absolute;
-        left: 0;
-        top: 1px;
-    }
-
     .wpn-textarea {
         width: 600px;
         height: 120px;
