@@ -1,5 +1,5 @@
 // @ts-nocheck
-class WP_DOUBAN {
+class WP_NEODB {
     constructor() {
         this.ver = "1.0.5";
         this.type = "movie";
@@ -32,9 +32,9 @@ class WP_DOUBAN {
 
     _fetchGenres() {
         document.querySelector(".db--genres").innerHTML = "";
-        const url = wpd_base.token
-            ? "https://node.wpista.com/v1/outer/genres?token=" + wpd_base.token
-            : wpd_base.api + "v1/movie/genres";
+        const url = wpn_base.token
+            ? "https://node.wpista.com/v1/outer/genres?token=" + wpn_base.token
+            : wpn_base.api + "v1/movie/genres";
         fetch(
             this._addSearchParams(url, {
                 type: this.type,
@@ -42,7 +42,7 @@ class WP_DOUBAN {
         )
             .then((response) => response.json())
             .then((data) => {
-                const t = wpd_base.token ? data.data : data;
+                const t = wpn_base.token ? data.data : data;
                 if (t.length) {
                     this.genre_list = t;
                     this._renderGenre();
@@ -111,12 +111,12 @@ class WP_DOUBAN {
     }
 
     _fetchData() {
-        const url = wpd_base.token
+        const url = wpn_base.token
             ? "https://node.wpista.com/v1/outer/faves"
-            : wpd_base.api + "v1/movies";
+            : wpn_base.api + "v1/movies";
         fetch(
             this._addSearchParams(url, {
-                token: wpd_base.token,
+                token: wpn_base.token,
                 type: this.type,
                 paged: this.paged,
                 genre: JSON.stringify(this.genre),
@@ -125,7 +125,7 @@ class WP_DOUBAN {
         )
             .then((response) => response.json())
             .then((data) => {
-                const t = wpd_base.token ? data.data : data;
+                const t = wpn_base.token ? data.data : data;
                 // @ts-ignore
                 if (t.length) {
                     if (
@@ -314,9 +314,9 @@ class WP_DOUBAN {
 
     _fetchCollection(item) {
         const type = item.dataset.style ? item.dataset.style : "card";
-        const url = wpd_base.token
-            ? "https://node.wpista.com/v1/outer/faves?token=" + wpd_base.token
-            : wpd_base.api + "v1/movies";
+        const url = wpn_base.token
+            ? "https://node.wpista.com/v1/outer/faves?token=" + wpn_base.token
+            : wpn_base.api + "v1/movies";
         fetch(
             this._addSearchParams(url, {
                 type: this.type,
@@ -328,7 +328,7 @@ class WP_DOUBAN {
         )
             .then((response) => response.json())
             .then((data) => {
-                const t = wpd_base.token ? data.data : data;
+                const t = wpn_base.token ? data.data : data;
                 // @ts-ignore
                 if (t.length) {
                     if (type == "card") {
@@ -398,4 +398,4 @@ class WP_DOUBAN {
     }
 }
 
-new WP_DOUBAN();
+new WP_NEODB();

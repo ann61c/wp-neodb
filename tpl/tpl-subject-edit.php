@@ -80,7 +80,7 @@
                         </p>
                     </td>
                 </tr>
-                <div id="wpd-snackbar" class="refresh-status"></div>
+                <div id="wpn-snackbar" class="refresh-status"></div>
                 <?php endif; ?>
                 <?php if ($action == 'edit_subject') : ?>
                     <tr valign="top">
@@ -148,7 +148,7 @@
                 <?php endif; ?>
             </tbody>
         </table>
-        <input type="hidden" name="wpd_action" value="<?php echo $action; ?>" />
+        <input type="hidden" name="wpn_action" value="<?php echo $action; ?>" />
         <input type="hidden" name="subject_id" value="<?php echo $subject->id ?>" />
         <input type="hidden" name="fave_id" value="<?php echo $fave->id ?>" />
         <input type="hidden" name="subject_type" value="<?php echo $fave->type ?>" />

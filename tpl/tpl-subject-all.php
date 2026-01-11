@@ -1,11 +1,11 @@
 <div class="wrap">
     <h2>所有条目</h2>
     <?php
-    require_once WPD_PATH . '/src/subject-all-table.php';
+    require_once WPN_PATH . '/src/subject-all-table.php';
     $table = new Subject_ALL_Table();
     $table->prepare_items(); ?>
-    <div class="wpd-actions-wrapper">
-        <div class="wpd-left-filters">
+    <div class="wpn-actions-wrapper">
+        <div class="wpn-left-filters">
             <?php $table->views(); ?>
         </div>
         <form id="posts-filter" method="get" action="admin.php">

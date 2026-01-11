@@ -1,7 +1,7 @@
 jQuery(document).ready(function($) {
-    var restUrl = wpd_subject_edit.rest_url;
-    var subjectId = wpd_subject_edit.subject_id;
-    var nonce = wpd_subject_edit.nonce;
+    var restUrl = wpn_subject_edit.rest_url;
+    var subjectId = wpn_subject_edit.subject_id;
+    var nonce = wpn_subject_edit.nonce;
     
     // Store initial values for all fields that have a revert button
     $('input, textarea').each(function() {
@@ -30,7 +30,7 @@ jQuery(document).ready(function($) {
 
     // Helper to show refresh status (Snackbar)
     function showStatus(message, type) {
-        var snackbar = $('#wpd-snackbar');
+        var snackbar = $('#wpn-snackbar');
         snackbar.removeClass('success error show')
                 .addClass(type)
                 .html(message);
@@ -57,7 +57,7 @@ jQuery(document).ready(function($) {
         
         // Show loading
         btn.prop('disabled', true).text('加载中...');
-        $('#wpd-snackbar').removeClass('show'); // Hide previous status
+        $('#wpn-snackbar').removeClass('show'); // Hide previous status
         
         // AJAX call
         $.ajax({
@@ -69,7 +69,7 @@ jQuery(document).ready(function($) {
             data: {
                 subject_id: subjectId,
                 source: source,
-                action: wpd_subject_edit.action
+                action: wpn_subject_edit.action
             },
             success: function(response) {
                 console.log('API Response:', response); // Debug

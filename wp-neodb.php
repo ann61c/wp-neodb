@@ -3,15 +3,18 @@
 Plugin Name: WP-NeoDB
 Plugin URI: https://fatesinger.com/101005
 Description: 🎬 📖 🎵 🎮 manage your movie / book / music / game records
-Version: 4.4.5
+Version: 5.0.0
 Author: Bigfa
 Author URI: https://fatesinger.com
+License: MIT
+License URI: https://opensource.org/licenses/MIT
+Text Domain: wp-neodb
 */
 
-define('WPD_VERSION', '4.4.5');
-define('WPD_URL', plugins_url('', __FILE__));
-define('WPD_PATH', dirname(__FILE__));
-define('WPD_ADMIN_URL', admin_url());
+define('WPN_VERSION', '5.0.0');
+define('WPN_URL', plugins_url('', __FILE__));
+define('WPN_PATH', dirname(__FILE__));
+define('WPN_ADMIN_URL', admin_url());
 
 ### DB Table Name
 global $wpdb;
@@ -57,8 +60,8 @@ function db_uninstall()
  * Creat cache folder
  */
 
-register_activation_hook(__FILE__, 'wpd_install');
-function wpd_install()
+register_activation_hook(__FILE__, 'wpn_install');
+function wpn_install()
 {
     // Create sechedule sync job
     wp_schedule_event(time(), 'hourly', 'db_sync');
@@ -178,25 +181,25 @@ function wpd_install()
             $wpdb->query($update_table['log_source']);
         }
     }
-    update_option('wpd_db_version', WPD_VERSION);
+    update_option('wpn_db_version', WPN_VERSION);
 }
 
 /**
  * Load classes
  */
-require WPD_PATH . '/src/functions.php';
-require WPD_PATH . '/src/setup.php';
-require WPD_PATH . '/src/db.php';
-require WPD_PATH . '/src/admin.php';
+require WPN_PATH . '/src/functions.php';
+require WPN_PATH . '/src/setup.php';
+require WPN_PATH . '/src/db.php';
+require WPN_PATH . '/src/admin.php';
 
-new WPD_Douban();
-new WPD_ADMIN();
+new WPN_NeoDB();
+new WPN_ADMIN();
 
 // Auto-update database if needed (hotfix for existing users)
-add_action('admin_init', 'wpd_auto_update_db');
-function wpd_auto_update_db() {
-    $installed_ver = get_option('wpd_db_version');
-    if ($installed_ver !== WPD_VERSION) {
-        wpd_install();
+add_action('admin_init', 'wpn_auto_update_db');
+function wpn_auto_update_db() {
+    $installed_ver = get_option('wpn_db_version');
+    if ($installed_ver !== WPN_VERSION) {
+        wpn_install();
     }
 }

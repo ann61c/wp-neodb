@@ -1,6 +1,6 @@
 jQuery(document).ready(function($) {
     // Handle delete button click
-    $('.wpd-delete-subject').on('click', function(e) {
+    $('.wpn-delete-subject').on('click', function(e) {
         e.preventDefault();
         
         var $link = $(this);
@@ -23,14 +23,14 @@ jQuery(document).ready(function($) {
             url: ajaxurl, // WordPress automatically provides this variable
             type: 'POST',
             data: {
-                action: 'wpd_delete_subject',
+                action: 'wpn_delete_subject',
                 subject_id: subjectId,
                 nonce: nonce
             },
             success: function(response) {
                 if (response.success) {
                     // Add fade-out animation
-                    $row.addClass('wpd-deleting');
+                    $row.addClass('wpn-deleting');
                     
                     // Show success notice
                     showNotice(response.data.message || '删除成功', 'success');
@@ -64,7 +64,7 @@ jQuery(document).ready(function($) {
         type = type || 'success';
         var noticeClass = 'notice-' + type;
         
-        var $notice = $('<div class="notice ' + noticeClass + ' is-dismissible wpd-delete-notice"><p>' + message + '</p></div>');
+        var $notice = $('<div class="notice ' + noticeClass + ' is-dismissible wpn-delete-notice"><p>' + message + '</p></div>');
         
         // Insert after the page heading or at the top of .wrap
         var $target = $('.wrap > h1, .wrap > h2').first();

@@ -32,10 +32,10 @@ class Subject_List_Table extends \WP_List_Table
     public function __construct()
     {
         parent::__construct(array(
-            'singular' => 'wp-douban',
-            'plural'   => 'wp-doubans',
+            'singular' => 'wp-neodb',
+            'plural'   => 'wp-neodbs',
             'ajax'     => false,
-            'screen'   => 'wp-douban',
+            'screen'   => 'wp-neodb',
         ));
     }
 
@@ -249,7 +249,7 @@ class Subject_List_Table extends \WP_List_Table
     //     return [];
     // }
 
-    private function wpd_save_images($id, $url, $type = "")
+    private function wpn_save_images($id, $url, $type = "")
     {
         $e = ABSPATH . 'douban_cache/' . $type . $id . '.jpg';
         if (!is_file($e)) {
@@ -286,7 +286,7 @@ class Subject_List_Table extends \WP_List_Table
             case 'poster':
                 $cache_prefix = $item->neodb_id ? 'neodb_' : ($item->tmdb_type ? 'tmdb' : '');
                 $cache_id = $item->neodb_id ? $item->neodb_id : $item->douban_id;
-                return '<img src="' . $this->wpd_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
+                return '<img src="' . $this->wpn_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
             case 'tmdb_type':
                 $sources = [];
                 if ($item->douban_id) $sources[] = '豆瓣';
@@ -296,7 +296,7 @@ class Subject_List_Table extends \WP_List_Table
             case 'name':
                 $out = $item->name;
                 if (!empty($item->is_top250)) {
-                    $out .= ' <span class="wpd-top250">Top250</span>';
+                    $out .= ' <span class="wpn-top250">Top250</span>';
                 }
                 return $out;
             case 'douban_score':
@@ -450,12 +450,12 @@ class Subject_List_Table extends \WP_List_Table
 
         $link = array(
             'page'                  => 'subject',
-            'wpd_action'       => 'cancel_mark',
+            'wpn_action'       => 'cancel_mark',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
         );
         $link = add_query_arg($link, admin_url('admin.php'));
-        $link = wp_nonce_url($link, "wpd_subject_{$event->id}");
+        $link = wp_nonce_url($link, "wpn_subject_{$event->id}");
 
         $links[] = "<a href='" . esc_url($link) . "'>取消标记</a>";
 

@@ -15,7 +15,7 @@
                 <tr valign="top">
                     <th scope="row"><label>显示设置</label></th>
                     <td>
-                        <ul class="wpd-color-ul">
+                        <ul class="wpn-color-ul">
                             <?php $color = array(
                                 array(
                                     'title' => '帐号ID',
@@ -45,10 +45,10 @@
                             );
                             foreach ($color as $key => $V) {
                                 ?>
-                            <li class="wpd-color-li">
+                            <li class="wpn-color-li">
                                 <code><?php echo $V['title']; ?></code>
                                 <?php $color = db_get_setting($V['key']) ? db_get_setting($V['key']) : $V['default']; ?>
-                                    <input name="<?php echo db_setting_key($V['key']); ?>" type="text" value="<?php echo $color; ?>" class="regular-text wpd-color-picker" />
+                                    <input name="<?php echo db_setting_key($V['key']); ?>" type="text" value="<?php echo $color; ?>" class="regular-text wpn-color-picker" />
                             </li>
                             <?php }
                             ?>
@@ -74,7 +74,7 @@
                 <tr valign="top">
                     <th scope="row"><label for="url">自定义CSS</label></th>
                     <td>
-                        <textarea name="<?php echo db_setting_key('css'); ?>" class="wpd-textarea"><?php echo db_get_setting('css'); ?></textarea>
+                        <textarea name="<?php echo db_setting_key('css'); ?>" class="wpn-textarea"><?php echo db_get_setting('css'); ?></textarea>
                         <p class="description">请输入合法的CSS。</p>
                     </td>
                 </tr>
@@ -143,23 +143,23 @@
                 </tr>
             </tbody>
         </table>
-        <div class="wpd-submit-form">
+        <div class="wpn-submit-form">
             <input type="submit" class="button-primary" name="save" value="<?php _e('Save Changes') ?>" />
         </div>
     </form>
     <style>
-    .wpd-color-li {
+    .wpn-color-li {
         position: relative;
         padding-left: 160px;
     }
 
-    .wpd-color-li code {
+    .wpn-color-li code {
         position: absolute;
         left: 0;
         top: 1px;
     }
 
-    .wpd-textarea {
+    .wpn-textarea {
         width: 600px;
         height: 120px;
     }

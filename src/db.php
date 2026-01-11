@@ -1,6 +1,6 @@
 <?php
 
-class db_sync extends WPD_Douban
+class db_sync extends WPN_NeoDB
 {
 
     private $base_url = 'https://fatesinger.com/dbapi/';
@@ -67,7 +67,7 @@ class db_sync extends WPD_Douban
 
         global $wpdb;
 
-        // Map NeoDB shelf types to WP-Douban status
+        // Map NeoDB shelf types to WP-NeoDB status
         $shelf_status_map = [
             'wishlist' => 'mark',   // 想看
             'progress' => 'doing',  // 在看
@@ -75,7 +75,7 @@ class db_sync extends WPD_Douban
             'dropped'  => 'dropped' // 不看了
         ];
 
-        // Map NeoDB categories to WP-Douban types
+        // Map NeoDB categories to WP-NeoDB types
         $category_type_map = [
             'book' => 'book',
             'movie' => 'movie',
@@ -89,7 +89,7 @@ class db_sync extends WPD_Douban
         $categories = ['book', 'movie', 'tv', 'music', 'game', 'performance'];
         $processed_count = 0;
 
-        foreach ($shelf_status_map as $shelf_type => $wpd_status) {
+        foreach ($shelf_status_map as $shelf_type => $wpn_status) {
             foreach ($categories as $category) {
                 $page = 1;
                 $has_more = true;
@@ -113,14 +113,14 @@ class db_sync extends WPD_Douban
                             continue;
                         }
 
-                        $wpd_type = $category_type_map[$category] ?? 'movie';
+                        $wpn_type = $category_type_map[$category] ?? 'movie';
 
                         // Extract external IDs (Douban ID, TMDB ID) first
                         $external_ids = $this->extract_external_ids_from_neodb($item);
 
                         // Use universal deduplication - check by neodb_id, douban_id, or tmdb_id
                         $movie = $this->find_existing_movie(
-                            $wpd_type,
+                            $wpn_type,
                             $external_ids['douban_id'],
                             $external_ids['tmdb_id'],
                             $external_ids['tmdb_type'],
@@ -143,7 +143,7 @@ class db_sync extends WPD_Douban
                             'douban_score' => $item['rating'] ?? 0,
                             'link' => $item['url'] ?? '',
                             'year' => $item['year'] ?? '',
-                            'type' => $wpd_type,
+                            'type' => $wpn_type,
                             'card_subtitle' => $description,
                             'neodb_id' => $neodb_id,
                         ];
@@ -178,19 +178,19 @@ class db_sync extends WPD_Douban
                                     'remark' => $mark['comment_text'] ?? '',
                                     'score' => $mark['rating_grade'] ?? '',
                                     'subject_id' => $movie_id,
-                                    'type' => $wpd_type,
-                                    'status' => $wpd_status,
+                                    'type' => $wpn_type,
+                                    'status' => $wpn_status,
                                 ]);
                                 if (!$movie) {
                                     $processed_count++;
                                 }
-                            } else if ($fav->status != $wpd_status || $fav->remark != ($mark['comment_text'] ?? '')) {
+                            } else if ($fav->status != $wpn_status || $fav->remark != ($mark['comment_text'] ?? '')) {
                                 // Update existing fave if status or comment changed
                                 $wpdb->update($wpdb->douban_faves, [
                                     'create_time' => $mark['created_time'] ?? date('Y-m-d H:i:s'),
                                     'remark' => $mark['comment_text'] ?? '',
                                     'score' => $mark['rating_grade'] ?? '',
-                                    'status' => $wpd_status,
+                                    'status' => $wpn_status,
                                 ], ['id' => $fav->id]);
                                 if (!$movie) {
                                     $processed_count++;

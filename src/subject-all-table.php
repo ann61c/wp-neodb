@@ -32,10 +32,10 @@ class Subject_ALL_Table extends \WP_List_Table
     public function __construct()
     {
         parent::__construct(array(
-            'singular' => 'wp-douban',
-            'plural'   => 'wp-doubans',
+            'singular' => 'wp-neodb',
+            'plural'   => 'wp-neodbs',
             'ajax'     => false,
-            'screen'   => 'wp-douban',
+            'screen'   => 'wp-neodb',
         ));
     }
 
@@ -291,7 +291,7 @@ class Subject_ALL_Table extends \WP_List_Table
     //     return [];
     // }
 
-    private function wpd_save_images($id, $url, $type = "")
+    private function wpn_save_images($id, $url, $type = "")
     {
         $e = ABSPATH . 'douban_cache/' . $type . $id . '.jpg';
         if (!is_file($e)) {
@@ -315,7 +315,7 @@ class Subject_ALL_Table extends \WP_List_Table
             case 'name':
                 $out = $item->name;
                 if (!empty($item->is_top250)) {
-                    $out .= ' <span class="wpd-top250">Top250</span>';
+                    $out .= ' <span class="wpn-top250">Top250</span>';
                 }
                 return $out;
             case 'douban_score':
@@ -331,7 +331,7 @@ class Subject_ALL_Table extends \WP_List_Table
             case 'poster':
                 $cache_prefix = $item->neodb_id ? 'neodb_' : ($item->tmdb_type ? 'tmdb' : '');
                 $cache_id = $item->neodb_id ? $item->neodb_id : $item->douban_id;
-                return '<img src="' . $this->wpd_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
+                return '<img src="' . $this->wpn_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
 
             case 'tmdb_type':
                 $sources = [];
@@ -364,24 +364,24 @@ class Subject_ALL_Table extends \WP_List_Table
 
         $link = array(
             'page'                  => 'subject_all',
-            'wpd_action'       => !empty($fave) ? 'cancel_mark' : 'mark',
+            'wpn_action'       => !empty($fave) ? 'cancel_mark' : 'mark',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
         );
         $link = add_query_arg($link, admin_url('admin.php'));
-        $link = wp_nonce_url($link, "wpd_subject_{$event->id}");
+        $link = wp_nonce_url($link, "wpn_subject_{$event->id}");
 
         $links[] = "<a href='" . esc_url($link) . "'>" . (!empty($fave) ? '取消标记' : '标记') . "</a>";
 
 
         $link = array(
             'page'                  => 'subject_all',
-            'wpd_action'       => 'sync_subject',
+            'wpn_action'       => 'sync_subject',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
         );
         $link = add_query_arg($link, admin_url('admin.php'));
-        $link = wp_nonce_url($link, "wpd_subject_{$event->id}");
+        $link = wp_nonce_url($link, "wpn_subject_{$event->id}");
 
         $links[] = "<a href='" . esc_url($link) . "'>同步条目</a>";
 
@@ -392,7 +392,7 @@ class Subject_ALL_Table extends \WP_List_Table
             'action' => 'edit_subject'
         );
         $link = add_query_arg($link, admin_url('admin.php'));
-        $link = wp_nonce_url($link, "wpd_subject_{$event->id}");
+        $link = wp_nonce_url($link, "wpn_subject_{$event->id}");
 
         $links[] = "<a href='" . esc_url($link) . "'>修改</a>";
 
@@ -401,16 +401,16 @@ class Subject_ALL_Table extends \WP_List_Table
             'page'                  => 'subject_all',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
-            'wpd_action' => 'delete_subject'
+            'wpn_action' => 'delete_subject'
         );
         $link = add_query_arg($link, admin_url('admin.php'));
-        $link = wp_nonce_url($link, "wpd_subject_{$event->id}");
+        $link = wp_nonce_url($link, "wpn_subject_{$event->id}");
 
         $links[] = sprintf(
-            "<a href='#' class='wpd-delete-subject' data-subject-id='%s' data-subject-name='%s' data-nonce='%s' data-fallback-url='%s'>删除</a>",
+            "<a href='#' class='wpn-delete-subject' data-subject-id='%s' data-subject-name='%s' data-nonce='%s' data-fallback-url='%s'>删除</a>",
             esc_attr($event->id),
             esc_attr($event->name),
-            wp_create_nonce('wpd_delete_subject_' . $event->id),
+            wp_create_nonce('wpn_delete_subject_' . $event->id),
             esc_url($link)
         );
 

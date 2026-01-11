@@ -1,15 +1,15 @@
 <?php
 
-class WPD_ADMIN extends WPD_Douban
+class WPN_ADMIN extends WPN_NeoDB
 {
     public function __construct()
     {
-        add_action('wp_ajax_wpd_import', [$this, 'import']);
-        add_action('wp_ajax_wpd_delete_subject', [$this, 'ajax_delete_subject']);
+        add_action('wp_ajax_wpn_import', [$this, 'import']);
+        add_action('wp_ajax_wpn_delete_subject', [$this, 'ajax_delete_subject']);
         add_action('init', [$this, 'action_handle_posts']);
     }
 
-    private function wpd_remove_images($id)
+    private function wpn_remove_images($id)
     {
         $e = ABSPATH . 'douban_cache/' . $id . '.jpg';
         if (!is_file($e)) return;
@@ -19,7 +19,7 @@ class WPD_ADMIN extends WPD_Douban
     public function action_handle_posts()
     {
         $sendback = wp_get_referer();
-        if (isset($_GET['wpd_action'])  && 'cancel_mark' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
+        if (isset($_GET['wpn_action'])  && 'cancel_mark' === $_GET['wpn_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpn_subject_' . $_GET['subject_id'])) {
             global $wpdb;
             $wpdb->delete(
                 $wpdb->douban_faves,
@@ -32,7 +32,7 @@ class WPD_ADMIN extends WPD_Douban
             exit;
         }
 
-        if (isset($_GET['wpd_action'])  && 'mark' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
+        if (isset($_GET['wpn_action'])  && 'mark' === $_GET['wpn_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpn_subject_' . $_GET['subject_id'])) {
             global $wpdb;
                 $wpdb->insert(
                 $wpdb->douban_faves,
@@ -48,14 +48,14 @@ class WPD_ADMIN extends WPD_Douban
         }
 
 
-        if (isset($_GET['wpd_action'])  && 'sync_subject' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
+        if (isset($_GET['wpn_action'])  && 'sync_subject' === $_GET['wpn_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpn_subject_' . $_GET['subject_id'])) {
             $this->sync_subject($_GET['subject_id'], $_GET['subject_type']);
             wp_redirect($sendback);
             exit;
         }
 
 
-        if (isset($_GET['wpd_action']) && 'empty_log' === $_GET['wpd_action']) {
+        if (isset($_GET['wpn_action']) && 'empty_log' === $_GET['wpn_action']) {
             global $wpdb;
             $wpdb->query("TRUNCATE TABLE $wpdb->douban_log");
             wp_redirect($sendback);
@@ -63,7 +63,7 @@ class WPD_ADMIN extends WPD_Douban
         }
 
 
-        if (isset($_POST['wpd_action']) && 'edit_fave' === $_POST['wpd_action']) {
+        if (isset($_POST['wpn_action']) && 'edit_fave' === $_POST['wpn_action']) {
             global $wpdb;
             if (isset($_POST['status']) && $_POST['status']) {
                 // Validate status against allowed values
@@ -99,11 +99,11 @@ class WPD_ADMIN extends WPD_Douban
             exit;
         }
 
-        if (isset($_POST['wpd_action']) && 'edit_subject' === $_POST['wpd_action']) {
+        if (isset($_POST['wpn_action']) && 'edit_subject' === $_POST['wpn_action']) {
             global $wpdb;
             $subject_id = intval($_POST['subject_id']);
             $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
-            $this->wpd_remove_images($subject->douban_id);
+            $this->wpn_remove_images($subject->douban_id);
             $wpdb->update(
                 $wpdb->douban_movies,
                 [
@@ -124,7 +124,7 @@ class WPD_ADMIN extends WPD_Douban
             exit;
         }
 
-        if (isset($_GET['wpd_action']) && 'refresh_from_source' === $_GET['wpd_action']) {
+        if (isset($_GET['wpn_action']) && 'refresh_from_source' === $_GET['wpn_action']) {
             if (!wp_verify_nonce($_GET['_wpnonce'], 'refresh_source_' . $_GET['subject_id'])) {
                 wp_die('Security check failed');
             }
@@ -145,7 +145,7 @@ class WPD_ADMIN extends WPD_Douban
                         break;
                     case 'neodb':
                         if ($subject->neodb_id) {
-                            // Determine NeoDB type from WP-Douban type
+                            // Determine NeoDB type from WP-NeoDB type
                             $neodb_type_map = ['movie' => 'movie', 'book' => 'book', 'music' => 'album', 'game' => 'game', 'drama' => 'performance'];
                             $neodb_type = $neodb_type_map[$subject->type] ?? 'movie';
                             $fresh_data = $this->fetch_neodb_subject($subject->neodb_id, $neodb_type);
@@ -185,11 +185,11 @@ class WPD_ADMIN extends WPD_Douban
             exit;
         }
 
-        if (isset($_GET['wpd_action']) && 'delete_subject' === $_GET['wpd_action']) {
+        if (isset($_GET['wpn_action']) && 'delete_subject' === $_GET['wpn_action']) {
             global $wpdb;
             $subject_id = intval($_GET['subject_id']);
             $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
-            $this->wpd_remove_images($subject->douban_id);
+            $this->wpn_remove_images($subject->douban_id);
 
             $wpdb->delete(
                 $wpdb->douban_faves,
@@ -295,7 +295,7 @@ class WPD_ADMIN extends WPD_Douban
     {
         // Verify nonce
         $subject_id = intval($_POST['subject_id']);
-        check_ajax_referer('wpd_delete_subject_' . $subject_id, 'nonce');
+        check_ajax_referer('wpn_delete_subject_' . $subject_id, 'nonce');
 
         global $wpdb;
         $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$subject_id}'");
@@ -306,14 +306,14 @@ class WPD_ADMIN extends WPD_Douban
         }
 
         // Remove cached images
-        $this->wpd_remove_images($subject->douban_id);
+        $this->wpn_remove_images($subject->douban_id);
         
         // Also remove NeoDB and TMDB cached images if they exist
         if ($subject->neodb_id) {
-            $this->wpd_remove_images('neodb_' . $subject->neodb_id);
+            $this->wpn_remove_images('neodb_' . $subject->neodb_id);
         }
         if ($subject->tmdb_id) {
-            $this->wpd_remove_images('tmdb' . $subject->tmdb_id);
+            $this->wpn_remove_images('tmdb' . $subject->tmdb_id);
         }
 
         // Delete from faves table

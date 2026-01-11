@@ -3,7 +3,7 @@
 /***
  * Core Class
  */
-class WPD_Douban
+class WPN_NeoDB
 {
     const VERSION = '4.4.5';
     private $base_url = 'https://fatesinger.com/dbapi/';
@@ -13,9 +13,9 @@ class WPD_Douban
     public function __construct()
     {
         $this->perpage = $this->db_get_setting('perpage') ? $this->db_get_setting('perpage') : 70;
-        $plugin_file = plugin_basename(WPD_PATH . '/wp-douban.php');
+        $plugin_file = plugin_basename(WPN_PATH . '/wp-neodb.php');
 
-        if (!$this->db_get_setting('disable_scripts')) add_action('wp_enqueue_scripts', [$this, 'wpd_load_scripts']);
+        if (!$this->db_get_setting('disable_scripts')) add_action('wp_enqueue_scripts', [$this, 'wpn_load_scripts']);
         wp_embed_register_handler('doubanlist', '#https?:\/\/(\w+)\.douban\.com\/subject\/(\d+)#i', [$this, 'wp_embed_handler_doubanlist']);
         wp_embed_register_handler('doubanalbum', '#https?:\/\/www\.douban\.com\/(\w+)\/(\d+)#i', [$this, 'wp_embed_handler_doubanablum']);
         wp_embed_register_handler('doubandrama', '#https?:\/\/www\.douban\.com\/location\/(\w+)\/(\d+)#i', [$this, 'wp_embed_handler_doubandrama']);
@@ -24,7 +24,7 @@ class WPD_Douban
 
         wp_embed_register_handler('neodb', '#https?://neodb\.social/(book|movie|tv|album|game|podcast|performance)/([a-zA-Z0-9]+)/?#i', [$this, 'wp_embed_handler_neodb']);
 
-        add_action('rest_api_init', [$this, 'wpd_register_rest_routes']);
+        add_action('rest_api_init', [$this, 'wpn_register_rest_routes']);
         add_filter("plugin_action_links_{$plugin_file}", [$this, 'plugin_action_links'], 10, 4);
         add_shortcode('wpd', [$this, 'list_shortcode']);
         add_shortcode('wpc', [$this, 'list_collection']);
@@ -116,7 +116,7 @@ class WPD_Douban
         $new = array(
             'crontrol-events'    => sprintf(
                 '<a href="%s">%s</a>',
-                esc_url(admin_url('admin.php?page=wpdouban')),
+                esc_url(admin_url('admin.php?page=wpneodb')),
                 '设置'
             ),
             'crontrol-schedules' => sprintf(
@@ -181,10 +181,10 @@ class WPD_Douban
     <div class="block-more block-more__centered">
         <div class="lds-ripple">
         </div>
-    </div><div class="db--copyright">Rendered by <a href="https://fatesinger.com/101005" target="_blank">WP-Douban</a></div></section>';
+    </div><div class="db--copyright">Rendered by <a href="https://fatesinger.com/101005" target="_blank">WP-NeoDB</a></div></section>';
     }
 
-    public function wpd_register_rest_routes()
+    public function wpn_register_rest_routes()
     {
         register_rest_route('v1', '/movies', array(
             'methods' => 'GET',
@@ -199,7 +199,7 @@ class WPD_Douban
         ));
 
         // AJAX data preview endpoint
-        register_rest_route('wpd/v1', '/preview-source', array(
+        register_rest_route('wpn/v1', '/preview-source', array(
             'methods' => 'POST',
             'callback' => [$this, 'preview_source_data'],
             'permission_callback' => function() {
@@ -308,7 +308,7 @@ class WPD_Douban
             $data->link = $embed_url;
         }
         
-        $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($id, $data->poster, 'tmdb') : $data->poster;
+        $cover = $this->db_get_setting('download_image') ? $this->wpn_save_images($id, $data->poster, 'tmdb') : $data->poster;
         $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' .  $cover . '"></div>';
         
         $meta_items = [];
@@ -342,7 +342,7 @@ class WPD_Douban
             $data->link = $embed_url;
         }
         
-        $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($id, $data->poster, 'douban') : (in_array($data->type, ['movie', 'book', 'music']) ? "https://dou.img.lithub.cc/" . $type . "/" . $data->douban_id . ".jpg" : $data->poster);
+        $cover = $this->db_get_setting('download_image') ? $this->wpn_save_images($id, $data->poster, 'douban') : (in_array($data->type, ['movie', 'book', 'music']) ? "https://dou.img.lithub.cc/" . $type . "/" . $data->douban_id . ".jpg" : $data->poster);
         $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' .  $cover . '"></div>';
         
         $meta_items = [];
@@ -549,7 +549,7 @@ class WPD_Douban
             return $this->populate_db_movie_metadata($movie);
         }
 
-        $transient_key = 'wpd_tmdb_' . $type . '_' . $id;
+        $transient_key = 'wpn_tmdb_' . $type . '_' . $id;
         $cached = get_transient($transient_key);
         if ($cached) return $cached;
 
@@ -650,7 +650,7 @@ class WPD_Douban
             return $this->populate_db_movie_metadata($movie);
         }
 
-        $transient_key = 'wpd_douban_' . $type . '_' . $id;
+        $transient_key = 'wpn_douban_' . $type . '_' . $id;
         $cached = get_transient($transient_key);
         if ($cached) return $cached;
 
@@ -761,7 +761,7 @@ class WPD_Douban
             return $this->populate_db_movie_metadata($movie);
         }
 
-        $transient_key = 'wpd_neodb_' . $uuid;
+        $transient_key = 'wpn_neodb_' . $uuid;
         $cached = get_transient($transient_key);
         if ($cached) return $cached;
 
@@ -784,7 +784,7 @@ class WPD_Douban
             return false;
         }
 
-        // Map NeoDB type to WP-Douban type
+        // Map NeoDB type to WP-NeoDB type
         $type_map = [
             'book' => 'book',
             'movie' => 'movie',
@@ -914,7 +914,7 @@ class WPD_Douban
             $data->link = $embed_url;
         }
 
-        $cover = $this->db_get_setting('download_image') ? $this->wpd_save_images($uuid, $data->poster, 'neodb_') : $data->poster;
+        $cover = $this->db_get_setting('download_image') ? $this->wpn_save_images($uuid, $data->poster, 'neodb_') : $data->poster;
         $output = '<div class="doulist-item"><div class="doulist-subject"><div class="doulist-post"><img referrerpolicy="no-referrer" src="' . $cover . '"></div>';
 
         $meta_items = [];
@@ -944,7 +944,7 @@ class WPD_Douban
         return $output;
     }
 
-    private function wpd_save_images($id, $url, $type = "")
+    private function wpn_save_images($id, $url, $type = "")
     {
         $e = ABSPATH . 'douban_cache/' . $type . $id . '.jpg';
         if (!is_file($e)) {
@@ -962,9 +962,9 @@ class WPD_Douban
         return $url;
     }
 
-    public function wpd_load_scripts()
+    public function wpn_load_scripts()
     {
-        wp_enqueue_style('wpd-css', WPD_URL . "/assets/css/db.min.css", [], WPD_VERSION, 'screen');
+        wp_enqueue_style('wpn-css', WPN_URL . "/assets/css/db.min.css", [], WPN_VERSION, 'screen');
         $dark = $this->db_get_setting('dark_mode') == 'auto'  ? "@media (prefers-color-scheme: dark) {
             :root {
             --db-main-color: rgba(0, 87, 217);
@@ -982,9 +982,9 @@ class WPD_Douban
         --db--background-gray: #3c3c3c;
         --db-border-color: rgba(255, 255, 255, 0.1);
     }";
-        if ($this->db_get_setting('dark_mode') == 'auto' || $this->db_get_setting('dark_mode') == 'dark') wp_add_inline_style('wpd-css', $dark);
-        wp_enqueue_script('wpdjs', WPD_URL . "/assets/js/db.min.js", [], WPD_VERSION, true);
-        wp_localize_script('wpdjs', 'wpd_base', [
+        if ($this->db_get_setting('dark_mode') == 'auto' || $this->db_get_setting('dark_mode') == 'dark') wp_add_inline_style('wpn-css', $dark);
+        wp_enqueue_script('wpnjs', WPN_URL . "/assets/js/db.min.js", [], WPN_VERSION, true);
+        wp_localize_script('wpnjs', 'wpn_base', [
             'api' => get_rest_url(),
             'token' => $this->db_get_setting('token'),
         ]);
@@ -1275,7 +1275,7 @@ class WPD_Douban
                 $cache_id = $movie->tmdb_id;
                 $cache_prefix = 'tmdb';
             }
-            $movie->poster = $this->wpd_save_images($cache_id, $movie->poster, $cache_prefix);
+            $movie->poster = $this->wpn_save_images($cache_id, $movie->poster, $cache_prefix);
         } else if (in_array($movie->type, ['movie', 'book', 'music']) && !empty($movie->douban_id)) {
             // Use image proxy if not downloading
             $movie->poster = "https://dou.img.lithub.cc/" . $movie->type . "/" . $movie->douban_id . ".jpg";

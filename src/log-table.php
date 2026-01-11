@@ -32,10 +32,10 @@ class Log_Table extends \WP_List_Table
     public function __construct()
     {
         parent::__construct(array(
-            'singular' => 'wp-douban',
-            'plural'   => 'wp-doubans',
+            'singular' => 'wp-neodb',
+            'plural'   => 'wp-neodbs',
             'ajax'     => false,
-            'screen'   => 'wp-douban',
+            'screen'   => 'wp-neodb',
         ));
     }
 
@@ -150,10 +150,10 @@ class Log_Table extends \WP_List_Table
     {
         $link = array(
             'page'                  => 'log',
-            'wpd_action'       => 'empty_log',
+            'wpn_action'       => 'empty_log',
         );
         $link = add_query_arg($link, admin_url('admin.php'));
-        $link = wp_nonce_url($link, "wpd_empty_log");
+        $link = wp_nonce_url($link, "wpn_empty_log");
 
 
         printf(
