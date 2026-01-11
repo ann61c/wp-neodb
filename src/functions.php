@@ -987,6 +987,7 @@ class WPN_NeoDB
         wp_localize_script('wpnjs', 'wpn_base', [
             'api' => get_rest_url(),
             'token' => $this->db_get_setting('token'),
+            'neodb_url' => $this->db_get_setting('neodb_url') ? $this->db_get_setting('neodb_url') : 'https://neodb.social',
         ]);
     }
 
@@ -1287,10 +1288,12 @@ class WPN_NeoDB
             $collection = $this->get_collection($collection_name);
             if ($collection) {
                 // Cross-source support: check if any record with this douban_id is in Top 250
-                $re = $wpdb->get_results("SELECT r.id FROM $wpdb->douban_relation r JOIN $wpdb->douban_movies m ON r.movie_id = m.id WHERE m.douban_id = '{$movie->douban_id}' AND r.collection_id = {$collection->id}");
+            $re = $wpdb->get_results("SELECT r.id FROM $wpdb->douban_relation r JOIN $wpdb->douban_movies m ON r.movie_id = m.id WHERE m.douban_id = '{$movie->douban_id}' AND r.collection_id = {$collection->id}");
                 $movie->is_top250 = !empty($re);
             }
         }
+
+
         return $movie;
     }
 

@@ -193,7 +193,7 @@ class WP_NEODB {
                     }${
                         movie.year > 0 ? " · " + movie.year : ""
                     }</div><div class="db--title"><a href="${
-                        movie.link
+                        this._fixLink(movie.link)
                     }" target="_blank">${movie.name}</a></div>
     
     </div>`;
@@ -225,7 +225,7 @@ class WP_NEODB {
                 }${
                     item.year > 0 ? " · " + item.year : ""
                 }</div><div class="db--title"><a href="${
-                    item.link
+                    this._fixLink(item.link)
                 }" target="_blank">${item.name}</a></div>
                 </div>
                 </div>`;
@@ -312,6 +312,17 @@ class WP_NEODB {
         }
     }
 
+    _fixLink(link) {
+        if (!link) return "";
+        if (link.startsWith("/") && wpn_base.neodb_url) {
+            // Remove trailing slash from base url if present, and leading slash from link
+            const baseUrl = wpn_base.neodb_url.replace(/\/+$/, "");
+            const path = link.replace(/^\/+/, "");
+            return baseUrl + "/" + path;
+        }
+        return link;
+    }
+
     _fetchCollection(item) {
         const type = item.dataset.style ? item.dataset.style : "card";
         const url = wpn_base.token
@@ -342,7 +353,7 @@ class WP_NEODB {
                             <div class="doulist-post"><img referrerpolicy="unsafe-url" src="${
                                 movie.poster
                             }"></div><div class="doulist-content"><div class="doulist-title"><a href="${
-                                    movie.link
+                                    this._fixLink(movie.link)
                                 }" class="cute" target="_blank" rel="external nofollow">${
                                     movie.name
                                 }</a></div><div class="rating"><span class="allstardark"><span class="allstarlight" style="width:75%"></span></span><span class="rating_nums">${
@@ -377,7 +388,7 @@ class WP_NEODB {
                                     }">
                                     <div>
                                     <div class="title"><a href="${
-                                        movie.link
+                                        this._fixLink(movie.link)
                                     }" class="cute" target="_blank" rel="external nofollow">${
                                         movie.name
                                     }</a></div>
