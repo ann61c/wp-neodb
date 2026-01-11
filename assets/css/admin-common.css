@@ -21,3 +21,47 @@
     border-radius: 2px;
     font-size: 10px;
 }
+
+/* Layout for Filters and Search Box */
+.wpd-actions-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Align bottom to match search box baseline mostly */
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    margin-bottom: 10px;
+}
+
+.wpd-left-filters {
+    display: flex;
+    flex-direction: column;
+    /* Ensure subsubsub inside behaves like block stack */
+}
+
+/* Mobile Responsiveness */
+@media screen and (max-width: 782px) {
+    .wpd-actions-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .wpd-left-filters {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    /* Force subsubsub to align left on mobile */
+    .wpd-left-filters .subsubsub {
+        text-align: left !important; /* Override WordPress default mobile centering */
+    }
+    
+    .wpd-actions-wrapper .search-box {
+        width: 100%;
+        position: relative;
+        top: 0;
+        right: 0;
+    }
+    
+    .wpd-actions-wrapper .search-box input[type="search"] {
+        width: 80%; /* Give some room for the button */
+    }
+}
