@@ -144,7 +144,7 @@
             </tbody>
         </table>
         <div class="wpn-submit-form">
-            <input type="submit" class="button-primary" name="save" value="<?php _e('Save Changes') ?>" />
+            <input type="submit" class="button-primary" name="save" value="<?php _e('保存') ?>" />
         </div>
     </form>
     <style>

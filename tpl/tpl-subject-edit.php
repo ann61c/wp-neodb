@@ -73,7 +73,7 @@
                         </div>
                         <p class="description">
                             <?php if ($action == 'edit_subject'): ?>
-                                💡 预览数据不会立即保存，您可以对比后再点击"Save Changes"保存
+                                💡 预览数据不会立即保存，您可以对比后再保存
                             <?php else: ?>
                                 💡 刷新后的数据会自动填入下方表单，您可以修改后再保存
                             <?php endif; ?>
@@ -153,7 +153,7 @@
         <input type="hidden" name="fave_id" value="<?php echo $fave->id ?>" />
         <input type="hidden" name="subject_type" value="<?php echo $fave->type ?>" />
         <div class="nm-submit-form">
-            <input type="submit" class="button-primary" name="save" value="<?php _e('Save Changes') ?>" />
+            <input type="submit" class="button-primary" name="save" value="<?php _e('保存') ?>" />
         </div>
     </form>
 </div>
