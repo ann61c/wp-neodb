@@ -246,10 +246,6 @@ class Subject_ALL_Table extends \WP_List_Table
             echo '</ul>';
         }
     }
-
-    protected function extra_tablenav($which)
-    {
-    }
     
     protected function get_source_views()
     {

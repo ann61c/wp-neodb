@@ -339,10 +339,6 @@ class Subject_List_Table extends \WP_List_Table
             echo '</ul>';
         }
     }
-
-    protected function extra_tablenav($which)
-    {
-    }
     
     protected function get_status_views()
     {
