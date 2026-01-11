@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: WP-Douban
+Plugin Name: WP-NeoDB
 Plugin URI: https://fatesinger.com/101005
 Description: 🎬 📖 🎵 🎮 manage your movie / book / music / game records
 Version: 4.4.5
