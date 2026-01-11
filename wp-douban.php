@@ -178,6 +178,7 @@ function wpd_install()
             $wpdb->query($update_table['log_source']);
         }
     }
+    update_option('wpd_db_version', WPD_VERSION);
 }
 
 /**
@@ -194,27 +195,8 @@ new WPD_ADMIN();
 // Auto-update database if needed (hotfix for existing users)
 add_action('admin_init', 'wpd_auto_update_db');
 function wpd_auto_update_db() {
-    global $wpdb;
-    $log_table = $wpdb->prefix . 'douban_log';
-    $movie_table = $wpdb->prefix . 'douban_movies';
-    
-    $update_needed = false;
-    
-    // Check for source column in log table
-    if ($wpdb->get_var("SHOW TABLES LIKE '$log_table'") == $log_table) {
-        if (!$wpdb->get_results("SHOW COLUMNS FROM $log_table LIKE 'source'")) {
-            $update_needed = true;
-        }
-    }
-    
-    // Check for neodb_id column in movies table
-    if (!$update_needed && $wpdb->get_var("SHOW TABLES LIKE '$movie_table'") == $movie_table) {
-        if (!$wpdb->get_results("SHOW COLUMNS FROM $movie_table LIKE 'neodb_id'")) {
-            $update_needed = true;
-        }
-    }
-    
-    if ($update_needed) {
+    $installed_ver = get_option('wpd_db_version');
+    if ($installed_ver !== WPD_VERSION) {
         wpd_install();
     }
 }
