@@ -31,12 +31,12 @@ class Subject_List_Table extends \WP_List_Table
      */
     public function __construct()
     {
-        parent::__construct(array(
+        parent::__construct([
             'singular' => 'wp-neodb',
             'plural'   => 'wp-neodbs',
             'ajax'     => false,
             'screen'   => 'wp-neodb',
-        ));
+        ]);
     }
 
     /**
@@ -62,13 +62,13 @@ class Subject_List_Table extends \WP_List_Table
         $offset = ($currentPage - 1) * 40;
 
         $subject_type = !empty($_GET['subject_type']) && $_GET['subject_type'] != 'all' ? sanitize_text_field($_GET['subject_type']) : '';
-        $search = !empty($_GET['s']) ? sanitize_text_field($_GET['s']) : '';
-        $status = !empty($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-        $source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
+        $search = empty($_GET['s']) ? '' : sanitize_text_field($_GET['s']);
+        $status = empty($_GET['status']) ? '' : sanitize_text_field($_GET['status']);
+        $source = empty($_GET['source']) ? '' : sanitize_text_field($_GET['source']);
         
         // Sorting
-        $orderby = !empty($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'create_time';
-        $order = !empty($_GET['order']) ? strtolower(sanitize_text_field($_GET['order'])) : 'desc';
+        $orderby = empty($_GET['orderby']) ? 'create_time' : sanitize_text_field($_GET['orderby']);
+        $order = empty($_GET['order']) ? 'desc' : strtolower(sanitize_text_field($_GET['order']));
 
         // Whitelist orderby
         $sortable = $this->get_sortable_columns();
@@ -83,9 +83,9 @@ class Subject_List_Table extends \WP_List_Table
 
         // Map column names to table fields if necessary
         $order_field = $orderby;
-        if ($orderby == 'create_time' || $orderby == 'status' || $orderby == 'score') {
+        if (in_array($orderby, ['create_time', 'status', 'score'])) {
             $order_field = 'f.' . $orderby;
-        } elseif ($orderby == 'name') {
+        } elseif ($orderby === 'name') {
             $order_field = 'm.name';
         }
 
@@ -124,10 +124,10 @@ class Subject_List_Table extends \WP_List_Table
 
         $this->items = $subjects;
 
-        $this->set_pagination_args(array(
+        $this->set_pagination_args([
             'total_items' => $this->get_subject_count($subject_type, $status, $source),
             'per_page'    => 40,
-        ));
+        ]);
     }
 
     /**
@@ -137,21 +137,21 @@ class Subject_List_Table extends \WP_List_Table
      */
     public function get_sortable_columns()
     {
-        return array(
-            'name'        => array('name', false),
-            'status'      => array('status', false),
-            'score'       => array('score', false),
-            'create_time' => array('create_time', true),
-        );
+        return [
+            'name'        => ['name', false],
+            'status'      => ['status', false],
+            'score'       => ['score', false],
+            'create_time' => ['create_time', true],
+        ];
     }
 
     public function get_views()
     {
 
-        $views = array();
-        $hooks_type = (!empty($_GET['subject_type']) ? $_GET['subject_type'] : 'all');
+        $views = [];
+        $hooks_type = (empty($_GET['subject_type']) ? 'all' : $_GET['subject_type']);
 
-        $types = array(
+        $types = [
             'all'      => '所有条目',
             'movie' => '电影',
             'book'     => '图书',
@@ -159,7 +159,7 @@ class Subject_List_Table extends \WP_List_Table
             'game'   => '游戏',
             'drama'   => '舞台剧',
             'podcast' => '播客',
-        );
+        ];
 
         /**
          * Filters the filter types on the cron event listing screen.
@@ -199,7 +199,7 @@ class Subject_List_Table extends \WP_List_Table
     {
         global $wpdb;
         $filter = $type && $type != 'all' ? " AND f.type = '{$type}'" : '';
-        $filter .= !empty($_GET['s']) ? " AND m.name LIKE '%{$_GET['s']}%'" : '';
+        $filter .= empty($_GET['s']) ? '' : " AND m.name LIKE '%{$_GET['s']}%'";
         $filter .= $status ? " AND f.status = '{$status}'" : "";
         
         // Source filter
@@ -263,8 +263,7 @@ class Subject_List_Table extends \WP_List_Table
             curl_close($ch);
             file_put_contents($e, $imageData);
         }
-        $url = home_url('/') . 'douban_cache/' . $type . $id . '.jpg';
-        return $url;
+        return home_url('/') . 'douban_cache/' . $type . $id . '.jpg';
     }
 
     public function column_default($item, $column_name)
@@ -275,23 +274,29 @@ class Subject_List_Table extends \WP_List_Table
             case 'status':
                 if ($item->status == 'done') {
                     return '已看';
-                } else if ($item->status == 'mark') {
+                } elseif ($item->status == 'mark') {
                     return '想看';
-                } else if ($item->status == 'doing') {
+                } elseif ($item->status == 'doing') {
                     return '在看';
-                } else if ($item->status == 'dropped') {
+                } elseif ($item->status == 'dropped') {
                     return '不看了';
                 }
 
             case 'poster':
                 $cache_prefix = $item->neodb_id ? 'neodb_' : ($item->tmdb_type ? 'tmdb' : '');
-                $cache_id = $item->neodb_id ? $item->neodb_id : $item->douban_id;
+                $cache_id = $item->neodb_id ?: $item->douban_id;
                 return '<img src="' . $this->wpn_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
             case 'tmdb_type':
                 $sources = [];
-                if ($item->douban_id) $sources[] = '豆瓣';
-                if ($item->neodb_id) $sources[] = 'NeoDB';
-                if ($item->tmdb_id) $sources[] = 'TMDB';
+                if ($item->douban_id) {
+                    $sources[] = '豆瓣';
+                }
+                if ($item->neodb_id) {
+                    $sources[] = 'NeoDB';
+                }
+                if ($item->tmdb_id) {
+                    $sources[] = 'TMDB';
+                }
                 return implode(', ', $sources);
             case 'name':
                 $out = $item->name;
@@ -342,9 +347,9 @@ class Subject_List_Table extends \WP_List_Table
     
     protected function get_status_views()
     {
-        $current_status = !empty($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-        $current_source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
-        $subject_type = !empty($_GET['subject_type']) ? sanitize_text_field($_GET['subject_type']) : 'all';
+        $current_status = empty($_GET['status']) ? '' : sanitize_text_field($_GET['status']);
+        $current_source = empty($_GET['source']) ? '' : sanitize_text_field($_GET['source']);
+        $subject_type = empty($_GET['subject_type']) ? 'all' : sanitize_text_field($_GET['subject_type']);
         
         $base_url = admin_url('admin.php?page=subject');
         if ($subject_type && $subject_type !== 'all') {
@@ -365,7 +370,7 @@ class Subject_List_Table extends \WP_List_Table
         $views = [];
         foreach ($status_filters as $key => $label) {
             $url = $base_url;
-            if ($key) {
+            if ($key !== '' && $key !== '0') {
                 $url = add_query_arg('status', $key, $url);
             }
             
@@ -385,9 +390,9 @@ class Subject_List_Table extends \WP_List_Table
     
     protected function get_source_views()
     {
-        $current_status = !empty($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-        $current_source = !empty($_GET['source']) ? sanitize_text_field($_GET['source']) : '';
-        $subject_type = !empty($_GET['subject_type']) ? sanitize_text_field($_GET['subject_type']) : 'all';
+        $current_status = empty($_GET['status']) ? '' : sanitize_text_field($_GET['status']);
+        $current_source = empty($_GET['source']) ? '' : sanitize_text_field($_GET['source']);
+        $subject_type = empty($_GET['subject_type']) ? 'all' : sanitize_text_field($_GET['subject_type']);
         
         $base_url = admin_url('admin.php?page=subject');
         if ($subject_type && $subject_type !== 'all') {
@@ -407,7 +412,7 @@ class Subject_List_Table extends \WP_List_Table
         $views = [];
         foreach ($source_filters as $key => $label) {
             $url = $base_url;
-            if ($key) {
+            if ($key !== '' && $key !== '0') {
                 $url = add_query_arg('source', $key, $url);
             }
             
@@ -436,7 +441,7 @@ class Subject_List_Table extends \WP_List_Table
             return '';
         }
 
-        $links = array();
+        $links = [];
         // $link = array(
         //     'page'                  => 'crontrol_admin_manage_page',
         //     'crontrol_action'       => 'run-cron',
@@ -448,23 +453,23 @@ class Subject_List_Table extends \WP_List_Table
 
         // $links[] = "<a href='" . esc_url($link) . "'>" . esc_html__('Edit', 'wp-crontrol') . '</a>';
 
-        $link = array(
+        $link = [
             'page'                  => 'subject',
             'wpn_action'       => 'cancel_mark',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
-        );
+        ];
         $link = add_query_arg($link, admin_url('admin.php'));
         $link = wp_nonce_url($link, "wpn_subject_{$event->id}");
 
         $links[] = "<a href='" . esc_url($link) . "'>取消标记</a>";
 
-        $link = array(
+        $link = [
             'page'                  => 'subject_edit',
             'subject_id'           => rawurlencode($event->id),
             'subject_type'          => rawurlencode($event->type),
             'action' => 'edit_fave'
-        );
+        ];
         $link = add_query_arg($link, admin_url('admin.php'));
         $links[] = "<a href='" . esc_url($link) . "'>编辑</a>";
 
@@ -478,7 +483,7 @@ class Subject_List_Table extends \WP_List_Table
      */
     public function get_columns()
     {
-        return array(
+        return [
             'name'     => '标题',
             'poster' => '封面',
             'tmdb_type' => '来源',
@@ -489,7 +494,7 @@ class Subject_List_Table extends \WP_List_Table
             'status' => '状态',
             'remark' => '我的短评',
             'score' => '我的评分'
-        );
+        ];
     }
 
     protected function get_genres($movie_id) {

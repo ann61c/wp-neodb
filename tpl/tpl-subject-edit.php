@@ -4,7 +4,7 @@
     global $wpdb;
     $subject = $subject_id ? $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$subject_id}'") : "";
     $fave = $subject_id ? $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE subject_id = '{$subject_id}'") : "";
-    $action = $_GET['action'] ? $_GET['action'] : 'edit_fave';
+    $action = $_GET['action'] ?: 'edit_fave';
     ?>
     <form method="post">
         <table class="form-table">
@@ -14,7 +14,7 @@
                     <td>
                     <p><img src="<?php
                                     $type = $subject->neodb_id ? 'neodb_' : ($subject->tmdb_id ? 'tmdb' : '');
-                                    $id = $subject->neodb_id ? $subject->neodb_id : ($subject->tmdb_id ? $subject->tmdb_id : $subject->douban_id);
+                                    $id = $subject->neodb_id ?: (($subject->tmdb_id ?: $subject->douban_id));
                                     $e = ABSPATH . 'douban_cache/' . $type . $id . '.jpg';
                                     echo (is_file($e) ? home_url('/') . 'douban_cache/' . $type . $id . '.jpg' : $subject->poster); ?>" width="100" /></p>
                         <p><?php echo (is_file($e) ? '封面已缓存' : '因豆瓣原因，原始封面可能无法显示。'); ?></p>
@@ -123,11 +123,21 @@
                         <th scope="row"><label for="status">状态</label></th>
                         <td>
                             <select name="status" id="status">
-                                <option <?php if ($fave->status == 'done') echo 'selected="selected" '; ?>value="done">已看</option>
-                                <option <?php if ($fave->status == 'doing') echo 'selected="doing" '; ?>value="doing">在看</option>
-                                <option <?php if ($fave->status == 'mark') echo 'selected="mark" '; ?>value="mark">想看</option>
-                                <option <?php if ($fave->status == 'dropped') echo 'selected="dropped" '; ?>value="dropped">不看了</option>
-                                <option <?php if ($fave->status == '') echo 'selected="selected" '; ?>value="">取消标记</option>
+                                <option <?php if ($fave->status == 'done') {
+                    echo 'selected="selected" ';
+                } ?>value="done">已看</option>
+                                <option <?php if ($fave->status == 'doing') {
+                    echo 'selected="doing" ';
+                } ?>value="doing">在看</option>
+                                <option <?php if ($fave->status == 'mark') {
+                    echo 'selected="mark" ';
+                } ?>value="mark">想看</option>
+                                <option <?php if ($fave->status == 'dropped') {
+                    echo 'selected="dropped" ';
+                } ?>value="dropped">不看了</option>
+                                <option <?php if ($fave->status == '') {
+                    echo 'selected="selected" ';
+                } ?>value="">取消标记</option>
                             </select>
                         </td>
                     </tr>
@@ -141,7 +151,7 @@
                     <tr valign="top">
                         <th scope="row"><label for="url">评分</label></th>
                         <td>
-                            <input name="score" type="number" value="<?php echo $fave->score ? $fave->score : '' ?>" min="0" max="10"></input>
+                            <input name="score" type="number" value="<?php echo $fave->score ?: '' ?>" min="0" max="10"></input>
                             <button type="button" class="button revert-btn" data-field="score" style="display:none;" title="恢复原值"><span class="dashicons dashicons-undo"></span></button>
                         </td>
                     </tr>

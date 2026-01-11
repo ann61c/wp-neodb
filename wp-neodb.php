@@ -13,7 +13,7 @@ Text Domain: wp-neodb
 
 define('WPN_VERSION', '5.0.0');
 define('WPN_URL', plugins_url('', __FILE__));
-define('WPN_PATH', dirname(__FILE__));
+define('WPN_PATH', __DIR__);
 define('WPN_ADMIN_URL', admin_url());
 
 ### DB Table Name
@@ -67,7 +67,7 @@ function wpn_install()
     wp_schedule_event(time(), 'hourly', 'db_sync');
     $thumb_path = ABSPATH . "douban_cache/";
     if (file_exists($thumb_path)) {
-        if (!is_writeable($thumb_path)) {
+        if (!is_writable($thumb_path)) {
             @chmod($thumb_path, 0755);
         }
     } else {
@@ -162,11 +162,21 @@ function wpn_install()
     $update_table['neodb'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `neodb_id` varchar(64) AFTER `tmdb_type`;";
     $update_table['log_source'] = "ALTER TABLE {$wpdb->douban_log} ADD COLUMN `source` varchar(16) DEFAULT 'douban' AFTER `action`;";
 
-    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_collection}'") != $wpdb->douban_collection) dbDelta($create_table['douban_collection']);
-    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_faves}'") != $wpdb->douban_faves) dbDelta($create_table['douban_faves']);
-    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_genres}'") != $wpdb->douban_genres) dbDelta($create_table['douban_genres']);
-    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_relation}'") != $wpdb->douban_relation) dbDelta($create_table['douban_relation']);
-    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_log}'") != $wpdb->douban_log) dbDelta($create_table['douban_log']);
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_collection}'") != $wpdb->douban_collection) {
+        dbDelta($create_table['douban_collection']);
+    }
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_faves}'") != $wpdb->douban_faves) {
+        dbDelta($create_table['douban_faves']);
+    }
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_genres}'") != $wpdb->douban_genres) {
+        dbDelta($create_table['douban_genres']);
+    }
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_relation}'") != $wpdb->douban_relation) {
+        dbDelta($create_table['douban_relation']);
+    }
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_log}'") != $wpdb->douban_log) {
+        dbDelta($create_table['douban_log']);
+    }
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_movies}'") != $wpdb->douban_movies) {
         dbDelta($create_table['douban_movies']);
     } elseif (!$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_movies} LIKE 'tmdb_id'")) { // update database movie table since 4.4.0
@@ -176,10 +186,8 @@ function wpn_install()
     }
     
     // Add source column to log table for existing installations
-    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_log}'") == $wpdb->douban_log) {
-        if (!$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_log} LIKE 'source'")) {
-            $wpdb->query($update_table['log_source']);
-        }
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_log}'") == $wpdb->douban_log && !$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_log} LIKE 'source'")) {
+        $wpdb->query($update_table['log_source']);
     }
     update_option('wpn_db_version', WPN_VERSION);
 }

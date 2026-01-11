@@ -31,12 +31,12 @@ class Log_Table extends \WP_List_Table
      */
     public function __construct()
     {
-        parent::__construct(array(
+        parent::__construct([
             'singular' => 'wp-neodb',
             'plural'   => 'wp-neodbs',
             'ajax'     => false,
             'screen'   => 'wp-neodb',
-        ));
+        ]);
     }
 
     /**
@@ -62,8 +62,8 @@ class Log_Table extends \WP_List_Table
         $offset = ($currentPage - 1) * 40;
 
         // Sorting
-        $orderby = !empty($_GET['orderby']) ? sanitize_text_field($_GET['orderby']) : 'create_time';
-        $order = !empty($_GET['order']) ? strtolower(sanitize_text_field($_GET['order'])) : 'desc';
+        $orderby = empty($_GET['orderby']) ? 'create_time' : sanitize_text_field($_GET['orderby']);
+        $order = empty($_GET['order']) ? 'desc' : strtolower(sanitize_text_field($_GET['order']));
 
         // Whitelist orderby
         $sortable = $this->get_sortable_columns();
@@ -80,21 +80,21 @@ class Log_Table extends \WP_List_Table
 
         $this->items = $subjects;
 
-        $this->set_pagination_args(array(
+        $this->set_pagination_args([
             'total_items' => $this->get_subject_count(),
             'per_page'    => 40,
-        ));
+        ]);
     }
 
     public function get_sortable_columns()
     {
-        return array(
-            'type'        => array('type', false),
-            'action'      => array('action', false),
-            'status'      => array('status', false),
-            'create_time' => array('create_time', true),
-            'account_id'  => array('account_id', false),
-        );
+        return [
+            'type'        => ['type', false],
+            'action'      => ['action', false],
+            'status'      => ['status', false],
+            'create_time' => ['create_time', true],
+            'account_id'  => ['account_id', false],
+        ];
     }
 
 
@@ -148,10 +148,10 @@ class Log_Table extends \WP_List_Table
 
     protected function extra_tablenav($which)
     {
-        $link = array(
+        $link = [
             'page'                  => 'log',
             'wpn_action'       => 'empty_log',
-        );
+        ];
         $link = add_query_arg($link, admin_url('admin.php'));
         $link = wp_nonce_url($link, "wpn_empty_log");
 
@@ -173,7 +173,7 @@ class Log_Table extends \WP_List_Table
             return '';
         }
 
-        $links = array();
+        $links = [];
 
 
         return $this->row_actions($links);
@@ -186,7 +186,7 @@ class Log_Table extends \WP_List_Table
      */
     public function get_columns()
     {
-        return array(
+        return [
             'type'     => '类型',
             'source' => '来源',
             'action' => '操作',
@@ -194,6 +194,6 @@ class Log_Table extends \WP_List_Table
             'message' => '备注',
             'create_time' => '时间',
             'account_id' => 'ID',
-        );
+        ];
     }
 }

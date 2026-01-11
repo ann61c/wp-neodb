@@ -15,16 +15,16 @@ function db_menu()
 }
 
 function db_admin_scripts($hook) {
-    if (strpos($hook, 'page_subject') !== false || strpos($hook, 'page_subject_all') !== false) {
+    if (str_contains($hook, 'page_subject') || str_contains($hook, 'page_subject_all')) {
         wp_enqueue_style('wpn-admin-common', WPN_URL . '/assets/css/admin-common.css', [], WPN_VERSION);
     }
     
-    if (strpos($hook, 'page_subject_all') !== false) {
+    if (str_contains($hook, 'page_subject_all')) {
         wp_enqueue_style('wpn-admin-delete', WPN_URL . '/assets/css/admin-delete.css', [], WPN_VERSION);
         wp_enqueue_script('wpn-admin-delete', WPN_URL . '/assets/js/admin-delete.js', ['jquery'], WPN_VERSION, true);
     }
 
-    if (strpos($hook, 'page_subject_edit') !== false) {
+    if (str_contains($hook, 'page_subject_edit')) {
         wp_enqueue_style('wpn-admin-subject-edit', WPN_URL . '/assets/css/admin-subject-edit.css', [], WPN_VERSION);
         wp_enqueue_script('wpn-admin-subject-edit', WPN_URL . '/assets/js/admin-subject-edit.js', ['jquery'], WPN_VERSION, true);
 

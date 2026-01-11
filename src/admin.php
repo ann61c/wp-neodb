@@ -12,7 +12,9 @@ class WPN_ADMIN extends WPN_NeoDB
     private function wpn_remove_images($id)
     {
         $e = ABSPATH . 'douban_cache/' . $id . '.jpg';
-        if (!is_file($e)) return;
+        if (!is_file($e)) {
+            return;
+        }
         unlink($e);
     }
 
@@ -69,7 +71,7 @@ class WPN_ADMIN extends WPN_NeoDB
                 // Validate status against allowed values
                 $allowed_statuses = ['mark', 'doing', 'done', 'dropped'];
                 $status_value = in_array($_POST['status'], $allowed_statuses) ? $_POST['status'] : 'done';
-                
+
                 $wpdb->update(
                     $wpdb->douban_faves,
                     [
@@ -91,9 +93,9 @@ class WPN_ADMIN extends WPN_NeoDB
                     ]
                 );
             }
-            $link = array(
+            $link = [
                 'page'                  => 'subject',
-            );
+            ];
             $link = add_query_arg($link, admin_url('admin.php'));
             wp_redirect($link);
             exit;
@@ -116,9 +118,9 @@ class WPN_ADMIN extends WPN_NeoDB
                     'id' => $subject_id,
                 ]
             );
-            $link = array(
+            $link = [
                 'page' => 'subject_all',
-            );
+            ];
             $link = add_query_arg($link, admin_url('admin.php'));
             wp_redirect($link);
             exit;
@@ -169,7 +171,7 @@ class WPN_ADMIN extends WPN_NeoDB
                         'pubdate' => $fresh_data->pubdate ?? $subject->pubdate,
                         'card_subtitle' => $fresh_data->card_subtitle ?? $subject->card_subtitle
                     ];
-                    
+
                     $wpdb->update($wpdb->douban_movies, $update_data, ['id' => $subject_id]);
                     $this->add_log($subject->type, 'refresh', $source, "Refreshed subject ID {$subject_id} from {$source}");
                 }
@@ -207,9 +209,9 @@ class WPN_ADMIN extends WPN_NeoDB
             );
 
 
-            $link = array(
+            $link = [
                 'page'                  => 'subject_all',
-            );
+            ];
             $link = add_query_arg($link, admin_url('admin.php'));
             wp_redirect($link);
             exit;

@@ -17,8 +17,7 @@ class db_sync extends WPN_NeoDB
         $url = "{$this->base_url}user/{$this->uid}/interests?count=49&start={$start}&type={$type}&status={$status}";
         $response = wp_remote_get($url);
         $data = json_decode(wp_remote_retrieve_body($response), true);
-        $interests = $data['interests'];
-        return $interests;
+        return $data['interests'];
     }
 
     /**
@@ -30,7 +29,7 @@ class db_sync extends WPN_NeoDB
      */
     public function neodb_fetch($shelf_type = 'complete', $category = null, $page = 1)
     {
-        $neodb_url = $this->db_get_setting('neodb_url') ? $this->db_get_setting('neodb_url') : 'https://neodb.social';
+        $neodb_url = $this->db_get_setting('neodb_url') ?: 'https://neodb.social';
         $token = $this->db_get_setting('neodb_token');
         
         if (!$token) {
@@ -50,9 +49,7 @@ class db_sync extends WPN_NeoDB
         if (is_wp_error($response)) {
             return false;
         }
-
-        $data = json_decode(wp_remote_retrieve_body($response), true);
-        return $data;
+        return json_decode(wp_remote_retrieve_body($response), true);
     }
 
     /**
@@ -184,7 +181,7 @@ class db_sync extends WPN_NeoDB
                                 if (!$movie) {
                                     $processed_count++;
                                 }
-                            } else if ($fav->status != $wpn_status || $fav->remark != ($mark['comment_text'] ?? '')) {
+                            } elseif ($fav->status != $wpn_status || $fav->remark != ($mark['comment_text'] ?? '')) {
                                 // Update existing fave if status or comment changed
                                 $wpdb->update($wpdb->douban_faves, [
                                     'create_time' => $mark['created_time'] ?? date('Y-m-d H:i:s'),
@@ -232,8 +229,12 @@ class db_sync extends WPN_NeoDB
         ];
         global $wpdb;
 
-        if ($this->db_get_setting('top250')) $this->get_collections('movie_top250');
-        if ($this->db_get_setting('book_top250')) $this->get_collections('book_top250');
+        if ($this->db_get_setting('top250')) {
+            $this->get_collections('movie_top250');
+        }
+        if ($this->db_get_setting('book_top250')) {
+            $this->get_collections('book_top250');
+        }
         
         // Sync NeoDB if token is configured
         if ($this->db_get_setting('neodb_token')) {
@@ -312,7 +313,7 @@ class db_sync extends WPN_NeoDB
                                             'type' => $type,
                                         ]
                                     );
-                                } else if ($fav->status != $interest['status']) {
+                                } elseif ($fav->status != $interest['status']) {
                                     $wpdb->update(
                                         $wpdb->douban_faves,
                                         [
@@ -336,6 +337,7 @@ class db_sync extends WPN_NeoDB
             }
             $this->add_log($type, 'sync', 'douban');
         }
+        return null;
     }
 }
 
