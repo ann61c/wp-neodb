@@ -89,11 +89,11 @@ class Subject_List_Table extends \WP_List_Table
             $order_field = 'm.name';
         }
 
-        $query = "SELECT m.*, f.create_time, f.remark, f.score, f.status FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE f.id IS NOT NULL";
+        $query = "SELECT m.*, f.create_time, f.remark, f.score, f.status FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE 1=1";
         $params = [];
 
         if ($subject_type) {
-            $query .= " AND f.type = %s";
+            $query .= " AND m.type = %s";
             $params[] = $subject_type;
         }
         if ($search) {
@@ -101,7 +101,7 @@ class Subject_List_Table extends \WP_List_Table
             $params[] = '%' . $wpdb->esc_like($search) . '%';
         }
         if ($status) {
-            $query .= " AND f.status = %s";
+            $query .= " AND f.status = %s AND f.id IS NOT NULL";
             $params[] = $status;
         }
         
@@ -198,9 +198,9 @@ class Subject_List_Table extends \WP_List_Table
     protected function get_subject_count($type, $status = '', $source = '')
     {
         global $wpdb;
-        $filter = $type && $type != 'all' ? " AND f.type = '{$type}'" : '';
+        $filter = $type && $type != 'all' ? " AND m.type = '{$type}'" : '';
         $filter .= empty($_GET['s']) ? '' : " AND m.name LIKE '%{$_GET['s']}%'";
-        $filter .= $status ? " AND f.status = '{$status}'" : "";
+        $filter .= $status ? " AND f.status = '{$status}' AND f.id IS NOT NULL" : "";
         
         // Source filter
         if ($source) {
@@ -213,7 +213,7 @@ class Subject_List_Table extends \WP_List_Table
             }
         }
         
-        $subjects = $wpdb->get_results("SELECT f.id FROM $wpdb->douban_faves f LEFT JOIN $wpdb->douban_movies m ON f.subject_id = m.id WHERE 1=1{$filter}");
+        $subjects = $wpdb->get_results("SELECT m.id FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE 1=1{$filter}");
         return count($subjects);
     }
     
