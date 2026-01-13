@@ -1,0 +1,38 @@
+/* Delete animation styles */
+.wpn-deleting {
+    background-color: #ffebe8 !important;
+    transition: background-color 0.3s ease-out;
+}
+
+.wpn-deleting td {
+    color: #999 !important;
+    transition: color 0.3s ease-out;
+}
+
+/* WordPress standard notice styles */
+.wpn-delete-notice {
+    margin: 5px 0 15px;
+    padding: 1px 12px;
+    background: #fff;
+    border-left: 4px solid;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.wpn-delete-notice.notice-success {
+    border-left-color: #46b450;
+}
+
+.wpn-delete-notice.notice-error {
+    border-left-color: #dc3232;
+}
+
+.wpn-delete-notice.notice-warning {
+    border-left-color: #ffb900;
+}
+
+.wpn-delete-notice p {
+    margin: 0.5em 0;
+    padding: 0;
+    font-size: 13px;
+    line-height: 1.5;
+}

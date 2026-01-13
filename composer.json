@@ -1,0 +1,11 @@
+{
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "rector/rector": "^2.3"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

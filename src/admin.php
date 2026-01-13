@@ -1,24 +1,27 @@
 <?php
 
-class WPD_ADMIN extends WPD_Douban
+class WPN_ADMIN extends WPN_NeoDB
 {
     public function __construct()
     {
-        add_action('wp_ajax_wpd_import', [$this, 'import']);
+        add_action('wp_ajax_wpn_import', [$this, 'import']);
+        add_action('wp_ajax_wpn_delete_subject', [$this, 'ajax_delete_subject']);
         add_action('init', [$this, 'action_handle_posts']);
     }
 
-    private function wpd_remove_images($id)
+    private function wpn_remove_images($id)
     {
         $e = ABSPATH . 'douban_cache/' . $id . '.jpg';
-        if (!is_file($e)) return;
+        if (!is_file($e)) {
+            return;
+        }
         unlink($e);
     }
 
     public function action_handle_posts()
     {
         $sendback = wp_get_referer();
-        if (isset($_GET['wpd_action'])  && 'cancel_mark' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
+        if (isset($_GET['wpn_action'])  && 'cancel_mark' === $_GET['wpn_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpn_subject_' . $_GET['subject_id'])) {
             global $wpdb;
             $wpdb->delete(
                 $wpdb->douban_faves,
@@ -31,14 +34,14 @@ class WPD_ADMIN extends WPD_Douban
             exit;
         }
 
-        if (isset($_GET['wpd_action'])  && 'mark' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
+        if (isset($_GET['wpn_action'])  && 'mark' === $_GET['wpn_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpn_subject_' . $_GET['subject_id'])) {
             global $wpdb;
-            $wpdb->insert(
+                $wpdb->insert(
                 $wpdb->douban_faves,
                 [
                     'subject_id' => $_GET['subject_id'],
                     'type' => $_GET['subject_type'],
-                    'create_time' => current_time('mysql'),
+                    'create_time' => current_time('mysql', 1),
                     'status' => 'done'
                 ]
             );
@@ -47,14 +50,14 @@ class WPD_ADMIN extends WPD_Douban
         }
 
 
-        if (isset($_GET['wpd_action'])  && 'sync_subject' === $_GET['wpd_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpd_subject_' . $_GET['subject_id'])) {
+        if (isset($_GET['wpn_action'])  && 'sync_subject' === $_GET['wpn_action'] && wp_verify_nonce($_GET['_wpnonce'], 'wpn_subject_' . $_GET['subject_id'])) {
             $this->sync_subject($_GET['subject_id'], $_GET['subject_type']);
-            // wp_redirect($sendback);
-            //exit;
+            wp_redirect($sendback);
+            exit;
         }
 
 
-        if (isset($_GET['wpd_action']) && 'empty_log' === $_GET['wpd_action']) {
+        if (isset($_GET['wpn_action']) && 'empty_log' === $_GET['wpn_action']) {
             global $wpdb;
             $wpdb->query("TRUNCATE TABLE $wpdb->douban_log");
             wp_redirect($sendback);
@@ -62,19 +65,23 @@ class WPD_ADMIN extends WPD_Douban
         }
 
 
-        if (isset($_POST['wpd_action']) && 'edit_fave' === $_POST['wpd_action']) {
+        if (isset($_POST['wpn_action']) && 'edit_fave' === $_POST['wpn_action']) {
             global $wpdb;
             if (isset($_POST['status']) && $_POST['status']) {
+                // Validate status against allowed values
+                $allowed_statuses = ['mark', 'doing', 'done', 'dropped'];
+                $status_value = in_array($_POST['status'], $allowed_statuses) ? $_POST['status'] : 'done';
+
                 $wpdb->update(
                     $wpdb->douban_faves,
                     [
-                        'remark' => $_POST['remark'],
-                        'score' => $_POST['score'],
-                        'create_time' => $_POST['create_time'],
-                        'status' => $_POST['status'],
+                        'remark' => sanitize_textarea_field($_POST['remark']),
+                        'score' => intval($_POST['score']),
+                        'create_time' => get_gmt_from_date(sanitize_text_field($_POST['create_time'])),
+                        'status' => $status_value,
                     ],
                     [
-                        'id' => $_POST['fave_id'],
+                        'id' => intval($_POST['fave_id']),
                     ]
                 );
             } else {
@@ -86,42 +93,126 @@ class WPD_ADMIN extends WPD_Douban
                     ]
                 );
             }
-            $link = array(
+
+            // Check if this is an AJAX request
+            if (wp_doing_ajax() || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                wp_send_json_success(['message' => '保存成功']);
+                exit;
+            }
+
+            $link = [
                 'page'                  => 'subject',
-            );
+            ];
             $link = add_query_arg($link, admin_url('admin.php'));
             wp_redirect($link);
             exit;
         }
 
-        if (isset($_POST['wpd_action']) && 'edit_subject' === $_POST['wpd_action']) {
+        if (isset($_POST['wpn_action']) && 'edit_subject' === $_POST['wpn_action']) {
             global $wpdb;
-            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$_POST['subject_id']}'");
-            $this->wpd_remove_images($subject->douban_id);
+            $subject_id = intval($_POST['subject_id']);
+            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
+            $this->wpn_remove_images($subject->douban_id);
+
+            // Truncate card_subtitle to 250 chars (DB limit: 256)
+            $card_subtitle = sanitize_textarea_field($_POST['card_subtitle']);
+            if (mb_strlen($card_subtitle, 'UTF-8') > 250) {
+                $card_subtitle = mb_substr($card_subtitle, 0, 247, 'UTF-8') . '...';
+            }
+
             $wpdb->update(
                 $wpdb->douban_movies,
                 [
-                    'name' => $_POST['name'],
-                    'douban_score' => $_POST['douban_score'],
-                    'card_subtitle' => $_POST['card_subtitle'],
-                    'poster' => $_POST['poster']
+                    'name' => sanitize_text_field($_POST['name']),
+                    'douban_score' => floatval($_POST['douban_score']),
+                    'card_subtitle' => $card_subtitle,
+                    'poster' => esc_url_raw($_POST['poster'])
                 ],
                 [
-                    'id' => $_POST['subject_id'],
+                    'id' => $subject_id,
                 ]
             );
-            $link = array(
+
+            // Check if this is an AJAX request
+            if (wp_doing_ajax() || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                wp_send_json_success(['message' => '保存成功']);
+                exit;
+            }
+
+            $link = [
                 'page' => 'subject_all',
-            );
+            ];
             $link = add_query_arg($link, admin_url('admin.php'));
             wp_redirect($link);
             exit;
         }
 
-        if (isset($_GET['wpd_action']) && 'delete_subject' === $_GET['wpd_action']) {
+        if (isset($_GET['wpn_action']) && 'refresh_from_source' === $_GET['wpn_action']) {
+            if (!wp_verify_nonce($_GET['_wpnonce'], 'refresh_source_' . $_GET['subject_id'])) {
+                wp_die('Security check failed');
+            }
+
             global $wpdb;
-            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$_GET['subject_id']}'");
-            $this->wpd_remove_images($subject->douban_id);
+            $subject_id = intval($_GET['subject_id']);
+            $source = sanitize_text_field($_GET['source']);
+            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
+
+            if ($subject) {
+                // Fetch fresh data from the selected source
+                $fresh_data = null;
+                switch ($source) {
+                    case 'douban':
+                        if ($subject->douban_id) {
+                            $fresh_data = $this->fetch_subject($subject->douban_id, $subject->type);
+                        }
+                        break;
+                    case 'neodb':
+                        if ($subject->neodb_id) {
+                            // Determine NeoDB type from WP-NeoDB type
+                            $neodb_type_map = ['movie' => 'movie', 'book' => 'book', 'music' => 'album', 'game' => 'game', 'drama' => 'performance'];
+                            $neodb_type = $neodb_type_map[$subject->type] ?? 'movie';
+                            $fresh_data = $this->fetch_neodb_subject($subject->neodb_id, $neodb_type);
+                        }
+                        break;
+                    case 'tmdb':
+                        if ($subject->tmdb_id && $subject->tmdb_type) {
+                            $fresh_data = $this->fetch_tmdb_subject($subject->tmdb_id, $subject->tmdb_type);
+                        }
+                        break;
+                }
+
+                if ($fresh_data) {
+                    // Full update: manual refresh should overwrite existing data
+                    $update_data = [
+                        'name' => $fresh_data->name ?? $subject->name,
+                        'poster' => $fresh_data->poster ?? $subject->poster,
+                        'douban_score' => $fresh_data->douban_score ?? $subject->douban_score,
+                        'link' => $fresh_data->link ?? $subject->link,
+                        'year' => $fresh_data->year ?? $subject->year,
+                        'pubdate' => $fresh_data->pubdate ?? $subject->pubdate,
+                        'card_subtitle' => $fresh_data->card_subtitle ?? $subject->card_subtitle
+                    ];
+
+                    $wpdb->update($wpdb->douban_movies, $update_data, ['id' => $subject_id]);
+                    $this->add_log($subject->type, 'refresh', $source, "Refreshed subject ID {$subject_id} from {$source}");
+                }
+            }
+
+            // Redirect back to edit page
+            $link = add_query_arg([
+                'page' => 'subject_all',
+                'action' => 'edit_subject',
+                'subject_id' => $subject_id
+            ], admin_url('admin.php'));
+            wp_redirect($link);
+            exit;
+        }
+
+        if (isset($_GET['wpn_action']) && 'delete_subject' === $_GET['wpn_action']) {
+            global $wpdb;
+            $subject_id = intval($_GET['subject_id']);
+            $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
+            $this->wpn_remove_images($subject->douban_id);
 
             $wpdb->delete(
                 $wpdb->douban_faves,
@@ -139,9 +230,9 @@ class WPD_ADMIN extends WPD_Douban
             );
 
 
-            $link = array(
+            $link = [
                 'page'                  => 'subject_all',
-            );
+            ];
             $link = add_query_arg($link, admin_url('admin.php'));
             wp_redirect($link);
             exit;
@@ -222,4 +313,53 @@ class WPD_ADMIN extends WPD_Douban
     //         'details' => $details
     //     ));
     // }
+
+    public function ajax_delete_subject()
+    {
+        // Verify nonce
+        $subject_id = intval($_POST['subject_id']);
+        check_ajax_referer('wpn_delete_subject_' . $subject_id, 'nonce');
+
+        global $wpdb;
+        $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = '{$subject_id}'");
+        
+        if (!$subject) {
+            wp_send_json_error(['message' => '条目不存在']);
+            return;
+        }
+
+        // Remove cached images
+        $this->wpn_remove_images($subject->douban_id);
+        
+        // Also remove NeoDB and TMDB cached images if they exist
+        if ($subject->neodb_id) {
+            $this->wpn_remove_images('neodb_' . $subject->neodb_id);
+        }
+        if ($subject->tmdb_id) {
+            $this->wpn_remove_images('tmdb' . $subject->tmdb_id);
+        }
+
+        // Delete from faves table
+        $wpdb->delete(
+            $wpdb->douban_faves,
+            [
+                'subject_id' => $subject_id,
+                'type' => $subject->type,
+            ]
+        );
+
+        // Delete from movies table
+        $deleted = $wpdb->delete(
+            $wpdb->douban_movies,
+            [
+                'id' => $subject_id,
+            ]
+        );
+
+        if ($deleted) {
+            wp_send_json_success(['message' => '条目已删除']);
+        } else {
+            wp_send_json_error(['message' => '删除失败']);
+        }
+    }
 }

@@ -1,0 +1,67 @@
+/* Common styles for WP-NeoDB admin pages */
+
+/* Ensure filter lists appear on separate lines */
+.subsubsub {
+    clear: both;
+    display: block;
+    float: none;
+    margin-bottom: 0px; /* Reset margin to control spacing manually */
+}
+
+/* Add spacing between filter rows usually handled by margin-top on specific elements in PHP if needed, 
+   but standard subsubsub has bottom margin. Let's ensure consistent spacing. */
+.subsubsub + .subsubsub {
+    margin-top: 0px;
+}
+
+.wpn-top250 {
+    background: #ffac2d;
+    color: #fff;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-size: 10px;
+}
+
+/* Layout for Filters and Search Box */
+.wpn-actions-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; /* Align bottom to match search box baseline mostly */
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    margin-bottom: 10px;
+}
+
+.wpn-left-filters {
+    display: flex;
+    flex-direction: column;
+    /* Ensure subsubsub inside behaves like block stack */
+}
+
+/* Mobile Responsiveness */
+@media screen and (max-width: 782px) {
+    .wpn-actions-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .wpn-left-filters {
+        width: 100%;
+        margin-bottom: 15px;
+    }
+
+    /* Force subsubsub to align left on mobile */
+    .wpn-left-filters .subsubsub {
+        text-align: left !important; /* Override WordPress default mobile centering */
+    }
+    
+    .wpn-actions-wrapper .search-box {
+        width: 100%;
+        position: relative;
+        top: 0;
+        right: 0;
+    }
+    
+    .wpn-actions-wrapper .search-box input[type="search"] {
+        width: 80%; /* Give some room for the button */
+    }
+}

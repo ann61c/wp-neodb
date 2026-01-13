@@ -1,5 +1,5 @@
 // @ts-nocheck
-class WP_DOUBAN {
+class WP_NEODB {
     constructor() {
         this.ver = "1.0.5";
         this.type = "movie";
@@ -32,9 +32,9 @@ class WP_DOUBAN {
 
     _fetchGenres() {
         document.querySelector(".db--genres").innerHTML = "";
-        const url = wpd_base.token
-            ? "https://node.wpista.com/v1/outer/genres?token=" + wpd_base.token
-            : wpd_base.api + "v1/movie/genres";
+        const url = wpn_base.token
+            ? "https://node.wpista.com/v1/outer/genres?token=" + wpn_base.token
+            : wpn_base.api + "v1/movie/genres";
         fetch(
             this._addSearchParams(url, {
                 type: this.type,
@@ -42,7 +42,7 @@ class WP_DOUBAN {
         )
             .then((response) => response.json())
             .then((data) => {
-                const t = wpd_base.token ? data.data : data;
+                const t = wpn_base.token ? data.data : data;
                 if (t.length) {
                     this.genre_list = t;
                     this._renderGenre();
@@ -111,12 +111,12 @@ class WP_DOUBAN {
     }
 
     _fetchData() {
-        const url = wpd_base.token
+        const url = wpn_base.token
             ? "https://node.wpista.com/v1/outer/faves"
-            : wpd_base.api + "v1/movies";
+            : wpn_base.api + "v1/movies";
         fetch(
             this._addSearchParams(url, {
-                token: wpd_base.token,
+                token: wpn_base.token,
                 type: this.type,
                 paged: this.paged,
                 genre: JSON.stringify(this.genre),
@@ -125,7 +125,7 @@ class WP_DOUBAN {
         )
             .then((response) => response.json())
             .then((data) => {
-                const t = wpd_base.token ? data.data : data;
+                const t = wpn_base.token ? data.data : data;
                 // @ts-ignore
                 if (t.length) {
                     if (
@@ -193,7 +193,7 @@ class WP_DOUBAN {
                     }${
                         movie.year > 0 ? " · " + movie.year : ""
                     }</div><div class="db--title"><a href="${
-                        movie.link
+                        this._fixLink(movie.link)
                     }" target="_blank">${movie.name}</a></div>
     
     </div>`;
@@ -225,7 +225,7 @@ class WP_DOUBAN {
                 }${
                     item.year > 0 ? " · " + item.year : ""
                 }</div><div class="db--title"><a href="${
-                    item.link
+                    this._fixLink(item.link)
                 }" target="_blank">${item.name}</a></div>
                 </div>
                 </div>`;
@@ -312,11 +312,22 @@ class WP_DOUBAN {
         }
     }
 
+    _fixLink(link) {
+        if (!link) return "";
+        if (link.startsWith("/") && wpn_base.neodb_url) {
+            // Remove trailing slash from base url if present, and leading slash from link
+            const baseUrl = wpn_base.neodb_url.replace(/\/+$/, "");
+            const path = link.replace(/^\/+/, "");
+            return baseUrl + "/" + path;
+        }
+        return link;
+    }
+
     _fetchCollection(item) {
         const type = item.dataset.style ? item.dataset.style : "card";
-        const url = wpd_base.token
-            ? "https://node.wpista.com/v1/outer/faves?token=" + wpd_base.token
-            : wpd_base.api + "v1/movies";
+        const url = wpn_base.token
+            ? "https://node.wpista.com/v1/outer/faves?token=" + wpn_base.token
+            : wpn_base.api + "v1/movies";
         fetch(
             this._addSearchParams(url, {
                 type: this.type,
@@ -328,28 +339,92 @@ class WP_DOUBAN {
         )
             .then((response) => response.json())
             .then((data) => {
-                const t = wpd_base.token ? data.data : data;
+                const t = wpn_base.token ? data.data : data;
                 // @ts-ignore
                 if (t.length) {
                     if (type == "card") {
                         item.innerHTML += t
                             .map((movie) => {
+                                // Parse metadata fields (stored as JSON strings)
+                                const director = movie.director ? JSON.parse(movie.director) : [];
+                                const actor = movie.actor ? JSON.parse(movie.actor) : [];
+                                const externalResources = movie.external_resources ? JSON.parse(movie.external_resources) : [];
+                                
+                                // Build external links badges (inline)
+                                let badgesHtml = '';
+                                externalResources.forEach(res => {
+                                    if (!res.url) return;
+                                    let name = '', cls = '';
+                                    if (res.url.includes('douban.com')) { name = '豆瓣'; cls = 'douban'; }
+                                    else if (res.url.includes('themoviedb.org')) { name = 'TMDB'; cls = 'tmdb'; }
+                                    else if (res.url.includes('imdb.com')) { name = 'IMDb'; cls = 'imdb'; }
+                                    else if (res.url.includes('wikidata.org')) { name = '维基数据'; cls = 'wikidata'; }
+                                    else if (res.url.includes('spotify.com')) { name = 'Spotify'; cls = 'spotify'; }
+                                    else if (res.url.includes('igdb.com')) { name = 'IGDB'; cls = 'igdb'; }
+                                    else if (res.url.includes('steampowered.com') || res.url.includes('steamcommunity.com')) { name = 'Steam'; cls = 'steam'; }
+                                    if (name) badgesHtml += ` <a href="${res.url}" class="${cls}" target="_blank" rel="noopener noreferrer">${name}</a>`;
+                                });
+
+                                // Type
+                                const typeMap = {movie: '影视', book: '书籍', music: '音乐', game: '游戏', drama: '戏剧', tv: '剧集', podcast: '播客'};
+                                const typePart = movie.type ? ` <span class="doulist-category">[${typeMap[movie.type] || movie.type}]</span> ` : '';
+                                
+                                // Build Header
+                                const headerHtml = `<div class="doulist-title-header">
+                                    <a href="${this._fixLink(movie.link)}" class="doulist-title cute" target="_blank" rel="external nofollow">${movie.name}</a>
+                                    ${movie.year ? ` <span class="doulist-year">(${movie.year})</span>` : ''}
+                                    ${typePart}
+                                    <span class="site-list">${badgesHtml}</span>
+                                </div>`;
+                                
+                                // Build Subtitle
+                                const subtitleHtml = movie.orig_title && movie.orig_title !== movie.name 
+                                    ? `<div class="doulist-subtitle">${movie.orig_title}</div>` : '';
+
+                                // Meta Line 1: Rating / Other Titles / PubDate
+                                const meta1Items = [];
+                                if (movie.douban_score > 0) {
+                                    meta1Items.push(`<span class="rating-score">${movie.douban_score}</span>`);
+                                }
+                                if (movie.orig_title && movie.orig_title !== movie.name) {
+                                    meta1Items.push(`其它标题: ${movie.orig_title}`);
+                                }
+                                if (movie.pubdate && movie.pubdate !== movie.year) {
+                                    meta1Items.push(movie.pubdate);
+                                }
+                                const meta1Html = meta1Items.length > 0 ? `<div class="doulist-meta-line">${meta1Items.join(' / ')}</div>` : '';
+
+                                // Meta Line 2: Genres / Director / Actor / etc.
+                                const meta2Items = [];
+                                
+                                // Genres
+                                if (movie.genres) {
+                                    const genres = movie.genres.split(',').map(g => g.trim()).filter(g => g !== movie.year && !g.endsWith('s'));
+                                    if (genres.length > 0) {
+                                        meta2Items.push('类型: ' + genres.slice(0, 3).join(' / '));
+                                    }
+                                }
+
+                                const directorLabel = movie.type === 'game' ? '开发者: ' : '导演: ';
+                                const actorLabel = movie.type === 'game' ? '平台: ' : '演员: ';
+                                
+                                if (director.length > 0) meta2Items.push(directorLabel + director.slice(0, 2).join('·'));
+                                if (actor.length > 0) meta2Items.push(actorLabel + actor.slice(0, 4).join(' / '));
+                                
+                                const meta2Html = meta2Items.length > 0 ? `<div class="doulist-meta-line">${meta2Items.join(' / ')}</div>` : '';
+
                                 return `<div class="doulist-item">
                             <div class="doulist-subject">
-                            <div class="db--viewTime JiEun">Marked ${
-                                movie.create_time
-                            }</div>
-                            <div class="doulist-post"><img referrerpolicy="unsafe-url" src="${
-                                movie.poster
-                            }"></div><div class="doulist-content"><div class="doulist-title"><a href="${
-                                    movie.link
-                                }" class="cute" target="_blank" rel="external nofollow">${
-                                    movie.name
-                                }</a></div><div class="rating"><span class="allstardark"><span class="allstarlight" style="width:75%"></span></span><span class="rating_nums">${
-                                    movie.douban_score
-                                }</span></div><div class="abstract">${
-                                    movie.remark || movie.card_subtitle
-                                }</div></div></div></div>`;
+                            <div class="db--viewTime JiEun">Marked ${movie.create_time}</div>
+                            <div class="doulist-post"><img referrerpolicy="unsafe-url" src="${movie.poster}"></div>
+                            <div class="doulist-content">
+                                ${headerHtml}
+                                ${subtitleHtml}
+                                ${meta1Html}
+                                ${meta2Html}
+                                <div class="abstract">${movie.remark || movie.card_subtitle || ''}</div>
+                                ${movie.genres ? `<div class="tag-list">${movie.genres.split(',').map(g => `<span><a href="#">${g.trim()}</a></span>`).join('')}</div>` : ''}
+                            </div></div></div>`;
                             })
                             .join("");
                     } else {
@@ -377,7 +452,7 @@ class WP_DOUBAN {
                                     }">
                                     <div>
                                     <div class="title"><a href="${
-                                        movie.link
+                                        this._fixLink(movie.link)
                                     }" class="cute" target="_blank" rel="external nofollow">${
                                         movie.name
                                     }</a></div>
@@ -398,4 +473,4 @@ class WP_DOUBAN {
     }
 }
 
-new WP_DOUBAN();
+new WP_NEODB();
