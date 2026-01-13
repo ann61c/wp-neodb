@@ -469,10 +469,12 @@ class WPN_NeoDB
         
         // Parse from external_resources field
         $resources = $this->parse_json_field($data, 'external_resources');
+        
         foreach ($resources as $resource) {
             if (empty($resource['url'])) continue;
             $url = $resource['url'];
             
+            // Check known websites and assign appropriate class
             if (strpos($url, 'douban.com') !== false) {
                 $links[] = ['url' => $url, 'name' => '豆瓣', 'class' => 'douban'];
             } elseif (strpos($url, 'themoviedb.org') !== false) {
@@ -491,6 +493,16 @@ class WPN_NeoDB
                 $links[] = ['url' => $url, 'name' => 'IGDB', 'class' => 'igdb'];
             } elseif (strpos($url, 'bangumi.tv') !== false || strpos($url, 'bgm.tv') !== false) {
                 $links[] = ['url' => $url, 'name' => 'Bangumi', 'class' => 'bangumi'];
+            } elseif (strpos($url, 'neodb.') !== false) {
+                // Recognize all NeoDB instances (neodb.social, neodb.kevga.de, etc.)
+                $links[] = ['url' => $url, 'name' => 'NeoDB', 'class' => 'fedi'];
+            } else {
+                // For unrecognized URLs, extract hostname as name
+                $parsed = parse_url($url);
+                $hostname = $parsed['host'] ?? 'Link';
+                // Remove 'www.' prefix if present
+                $display_name = preg_replace('/^www\./', '', $hostname);
+                $links[] = ['url' => $url, 'name' => $display_name, 'class' => 'external'];
             }
         }
 
@@ -1679,11 +1691,66 @@ class WPN_NeoDB
         }
 
         // Content fields: only fill if currently empty/null
-        $fillable_fields = ['name', 'poster', 'douban_score', 'link', 'year', 'pubdate', 'card_subtitle', 'pub_house', 'director', 'actor', 'orig_title', 'external_resources'];
+        // Note: external_resources is handled separately below
+        $fillable_fields = ['name', 'poster', 'douban_score', 'link', 'year', 'pubdate', 'card_subtitle', 'pub_house', 'director', 'actor', 'orig_title'];
         foreach ($fillable_fields as $field) {
             // Check if existing field is empty
             if (isset($new_data[$field]) && !empty($new_data[$field]) && (!isset($existing_movie->$field) || $existing_movie->$field === '' || $existing_movie->$field === null || $existing_movie->$field === '0' || $existing_movie->$field === 0)) {
                 $update_data[$field] = $new_data[$field];
+            }
+        }
+
+        // Special handling for external_resources - merge arrays instead of replacing
+        if (isset($new_data['external_resources']) && !empty($new_data['external_resources'])) {
+            // Parse existing resources
+            $existing_resources = [];
+            if (!empty($existing_movie->external_resources)) {
+                $decoded = json_decode($existing_movie->external_resources, true);
+                if (is_array($decoded)) {
+                    $existing_resources = $decoded;
+                }
+            }
+            
+            // Parse new resources
+            $new_resources = [];
+            if (is_string($new_data['external_resources'])) {
+                $decoded = json_decode($new_data['external_resources'], true);
+                if (is_array($decoded)) {
+                    $new_resources = $decoded;
+                }
+            } elseif (is_array($new_data['external_resources'])) {
+                $new_resources = $new_data['external_resources'];
+            }
+            
+            // Merge and deduplicate by hostname (not full URL)
+            // This ensures each website appears only once
+            $merged = $existing_resources;
+            $existing_hosts = [];
+            
+            // Extract hostnames from existing resources
+            foreach ($existing_resources as $resource) {
+                if (!empty($resource['url'])) {
+                    $parsed = parse_url($resource['url']);
+                    if (isset($parsed['host'])) {
+                        $existing_hosts[] = $parsed['host'];
+                    }
+                }
+            }
+            
+            // Add new resources if their hostname is not already present
+            foreach ($new_resources as $resource) {
+                if (!empty($resource['url'])) {
+                    $parsed = parse_url($resource['url']);
+                    if (isset($parsed['host']) && !in_array($parsed['host'], $existing_hosts)) {
+                        $merged[] = $resource;
+                        $existing_hosts[] = $parsed['host'];
+                    }
+                }
+            }
+            
+            // Only update if we added new resources
+            if (count($merged) > count($existing_resources)) {
+                $update_data['external_resources'] = json_encode($merged);
             }
         }
 
