@@ -1,6 +1,6 @@
 <div class="wrap">
     <h2>插件设置</h2>
-    <p>请查看 <a href="https://fatesinger.com/101050" target="_blank">帮助文章</a> 了解更多使用详情。</p>
+    <p>请查看 <a href="https://blog.lyc.sh/wp-neodb" target="_blank">帮助文章</a> 了解更多使用详情。</p>
     <form method="post" action="options.php">
         <?php
         settings_fields('db_setting_group');

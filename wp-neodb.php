@@ -1,17 +1,17 @@
 <?php
 /*
 Plugin Name: WP-NeoDB
-Plugin URI: https://fatesinger.com/101005
-Description: 🎬 📖 🎵 🎮 manage your movie / book / music / game records
-Version: 5.0.1
-Author: Bigfa
-Author URI: https://fatesinger.com
+Plugin URI: https://blog.lyc.sh/wp-neodb
+Description: 📚 🎬 🎵 🎮 💿 Manage and display your media collection from NeoDB, Douban, and TMDB. Embed movies, books, music, games, and albums in your posts with rich metadata.
+Version: 5.0.2
+Author: ann61c
+Author URI: https://blog.lyc.sh
 License: MIT
 License URI: https://opensource.org/licenses/MIT
 Text Domain: wp-neodb
 */
 
-define('WPN_VERSION', '5.0.1');
+define('WPN_VERSION', '5.0.2');
 define('WPN_URL', plugins_url('', __FILE__));
 define('WPN_PATH', __DIR__);
 define('WPN_ADMIN_URL', admin_url());

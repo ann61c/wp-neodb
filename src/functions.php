@@ -130,7 +130,7 @@ class WPN_NeoDB
             ),
             'crontrol-help' => sprintf(
                 '<a href="%s" target="_blank">%s</a>',
-                'https://fatesinger.com/101050',
+                'https://blog.lyc.sh/wp-neodb',
                 '帮助'
             ),
         ];
@@ -185,7 +185,7 @@ class WPN_NeoDB
     <div class="block-more block-more__centered">
         <div class="lds-ripple">
         </div>
-    </div><div class="db--copyright">Rendered by <a href="https://fatesinger.com/101005" target="_blank">WP-NeoDB</a></div></section>';
+    </div><div class="db--copyright">Rendered by <a href="https://blog.lyc.sh/wp-neodb" target="_blank">WP-NeoDB</a></div></section>';
     }
 
     public function wpn_register_rest_routes()
