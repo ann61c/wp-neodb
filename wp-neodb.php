@@ -3,7 +3,7 @@
 Plugin Name: WP-NeoDB
 Plugin URI: https://fatesinger.com/101005
 Description: 🎬 📖 🎵 🎮 manage your movie / book / music / game records
-Version: 5.0.0
+Version: 5.0.1
 Author: Bigfa
 Author URI: https://fatesinger.com
 License: MIT
@@ -11,7 +11,7 @@ License URI: https://opensource.org/licenses/MIT
 Text Domain: wp-neodb
 */
 
-define('WPN_VERSION', '5.0.0');
+define('WPN_VERSION', '5.0.1');
 define('WPN_URL', plugins_url('', __FILE__));
 define('WPN_PATH', __DIR__);
 define('WPN_ADMIN_URL', admin_url());
@@ -128,6 +128,11 @@ function wpn_install()
         "tmdb_id int," .
         "tmdb_type varchar(16)," .
         "neodb_id varchar(64)," .
+        "director TEXT," .
+        "actor TEXT," .
+        "orig_title varchar(256)," .
+        "external_resources TEXT," .
+        "pub_house varchar(256)," .
         "PRIMARY KEY (id)," .
         "KEY douban_id (douban_id)," .
         "KEY neodb_id (neodb_id)," .
@@ -161,6 +166,8 @@ function wpn_install()
     $update_table['douban_movies'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `tmdb_id` int(10) AFTER `douban_id`, ADD COLUMN `tmdb_type` varchar(16) AFTER `tmdb_id`;";
     $update_table['neodb'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `neodb_id` varchar(64) AFTER `tmdb_type`;";
     $update_table['log_source'] = "ALTER TABLE {$wpdb->douban_log} ADD COLUMN `source` varchar(16) DEFAULT 'douban' AFTER `action`;";
+    $update_table['metadata'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `director` TEXT AFTER `neodb_id`, ADD COLUMN `actor` TEXT AFTER `director`, ADD COLUMN `orig_title` varchar(256) AFTER `actor`, ADD COLUMN `external_resources` TEXT AFTER `orig_title`;";
+    $update_table['pub_house'] = "ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `pub_house` varchar(256) AFTER `external_resources`;";
 
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_collection}'") != $wpdb->douban_collection) {
         dbDelta($create_table['douban_collection']);
@@ -185,6 +192,27 @@ function wpn_install()
         $wpdb->query($update_table['neodb']);
     }
     
+    // Granularly check and add missing columns to ensure DB integrity
+    $movie_columns = [
+        'tmdb_id' => 'int(10)',
+        'tmdb_type' => 'varchar(16)',
+        'neodb_id' => 'varchar(64)',
+        'director' => 'TEXT',
+        'actor' => 'TEXT',
+        'orig_title' => 'varchar(256)',
+        'external_resources' => 'TEXT',
+        'pub_house' => 'varchar(256)'
+    ];
+    
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_movies}'") == $wpdb->douban_movies) {
+        foreach ($movie_columns as $col => $col_type) {
+            $check = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_movies} LIKE '{$col}'");
+            if (empty($check)) {
+                $wpdb->query("ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `{$col}` {$col_type}");
+            }
+        }
+    }
+
     // Add source column to log table for existing installations
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_log}'") == $wpdb->douban_log && !$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_log} LIKE 'source'")) {
         $wpdb->query($update_table['log_source']);
