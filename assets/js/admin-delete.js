@@ -1,4 +1,10 @@
 jQuery(document).ready(function($) {
+    // Debug helper functions - only log when WP_DEBUG is enabled
+    var debug = (typeof wpn_delete !== 'undefined' && wpn_delete.debug) || false;
+    var wpnError = function() {
+        if (debug) console.error.apply(console, arguments);
+    };
+    
     // Handle delete button click
     $('.wpn-delete-subject').on('click', function(e) {
         e.preventDefault();
@@ -50,7 +56,7 @@ jQuery(document).ready(function($) {
             },
             error: function(xhr, status, error) {
                 // If AJAX fails, try the fallback URL
-                console.error('AJAX error:', error);
+                wpnError('AJAX error:', error);
                 showNotice('AJAX请求失败，使用传统方式删除...', 'warning');
                 setTimeout(function() {
                     window.location.href = fallbackUrl;

@@ -22,6 +22,10 @@ function db_admin_scripts($hook) {
     if (str_contains($hook, 'page_subject_all')) {
         wp_enqueue_style('wpn-admin-delete', WPN_URL . '/assets/css/admin-delete.css', [], WPN_VERSION);
         wp_enqueue_script('wpn-admin-delete', WPN_URL . '/assets/js/admin-delete.js', ['jquery'], WPN_VERSION, true);
+        wp_localize_script('wpn-admin-delete', 'wpn_delete', [
+            'nonce' => wp_create_nonce('wpn_delete_subject'),
+            'debug' => defined('WP_DEBUG') && WP_DEBUG
+        ]);
     }
 
     if (str_contains($hook, 'page_subject_edit')) {
@@ -34,7 +38,8 @@ function db_admin_scripts($hook) {
             'rest_url' => rest_url('wpn/v1/preview-source'),
             'subject_id' => $subject_id,
             'action' => $action,
-            'nonce' => wp_create_nonce('wp_rest')
+            'nonce' => wp_create_nonce('wp_rest'),
+            'debug' => defined('WP_DEBUG') && WP_DEBUG
         ]);
     }
 }

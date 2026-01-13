@@ -1,4 +1,13 @@
 jQuery(document).ready(function($) {
+    // Debug helper functions - only log when WP_DEBUG is enabled
+    var debug = wpn_subject_edit.debug || false;
+    var wpnLog = function() {
+        if (debug) console.log.apply(console, arguments);
+    };
+    var wpnError = function() {
+        if (debug) console.error.apply(console, arguments);
+    };
+    
     var restUrl = wpn_subject_edit.rest_url;
     var subjectId = wpn_subject_edit.subject_id;
     var nonce = wpn_subject_edit.nonce;
@@ -72,7 +81,7 @@ jQuery(document).ready(function($) {
                 action: wpn_subject_edit.action
             },
             success: function(response) {
-                console.log('API Response:', response); // Debug
+                wpnLog('API Response:', response);
                 if (response.success) {
                     fillFormWithPreview(response.data, response.source);
                 } else {
@@ -80,7 +89,7 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error:', xhr.responseText); // Debug
+                wpnError('AJAX Error:', xhr.responseText);
                 showStatus('<span class="dashicons dashicons-warning"></span> 请求失败: ' + error, 'error');
             },
             complete: function() {
@@ -93,7 +102,7 @@ jQuery(document).ready(function($) {
     // Fill form with preview data
     function fillFormWithPreview(data, source) {
         var updated = 0;
-        console.log('Filling form with data:', data); // Debug
+        wpnLog('Filling form with data:', data);
         $.each(data, function(field, value) {
             var input = $('[name="' + field + '"]');
             if (input.length && value !== undefined && value !== null) {
@@ -106,12 +115,12 @@ jQuery(document).ready(function($) {
                     // Trigger input event to update UI (show revert button, etc.)
                     input.trigger('input');
                     updated++;
-                    console.log('Updated field:', field); // Debug
+                    wpnLog('Updated field:', field);
                 }
             }
         });
         
-        console.log('Total updated:', updated); // Debug
+        wpnLog('Total updated:', updated);
         if (updated > 0) {
             showStatus('<span class="dashicons dashicons-yes-alt"></span> 已加载来自 ' + source + ' 的数据（更新了 ' + updated + ' 个字段）', 'success');
         } else {
@@ -166,7 +175,7 @@ jQuery(document).ready(function($) {
                 });
             },
             error: function(xhr, status, error) {
-                console.error('Save Error:', xhr.responseText);
+                wpnError('Save Error:', xhr.responseText);
                 showStatus('<span class="dashicons dashicons-warning"></span> 保存失败: ' + error, 'error');
             },
             complete: function() {
