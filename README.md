@@ -5,7 +5,7 @@
 
 数据本地化，解决豆瓣接口失效及图片防盗链。
 
-last version `5.0`
+latest version `5.0.3`
 
 ## 快速配置
 

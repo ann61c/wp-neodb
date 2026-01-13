@@ -3,7 +3,7 @@
 Plugin Name: WP-NeoDB
 Plugin URI: https://blog.lyc.sh/wp-neodb
 Description: 📚 🎬 🎵 🎮 💿 Manage and display your media collection from NeoDB, Douban, and TMDB. Embed movies, books, music, games, and albums in your posts with rich metadata.
-Version: 5.0.2
+Version: 5.0.3
 Author: ann61c
 Author URI: https://blog.lyc.sh
 License: MIT
@@ -11,7 +11,7 @@ License URI: https://opensource.org/licenses/MIT
 Text Domain: wp-neodb
 */
 
-define('WPN_VERSION', '5.0.2');
+define('WPN_VERSION', '5.0.3');
 define('WPN_URL', plugins_url('', __FILE__));
 define('WPN_PATH', __DIR__);
 define('WPN_ADMIN_URL', admin_url());
@@ -264,9 +264,13 @@ require WPN_PATH . '/src/functions.php';
 require WPN_PATH . '/src/setup.php';
 require WPN_PATH . '/src/db.php';
 require WPN_PATH . '/src/admin.php';
+require WPN_PATH . '/src/updater.php';
 
 new WPN_NeoDB();
 new WPN_ADMIN();
+if (is_admin()) {
+    new WPN_Updater(__FILE__);
+}
 
 // Auto-update database if needed (hotfix for existing users)
 add_action('admin_init', 'wpn_auto_update_db');
