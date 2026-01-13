@@ -106,12 +106,19 @@ class WPN_ADMIN extends WPN_NeoDB
             $subject_id = intval($_POST['subject_id']);
             $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
             $this->wpn_remove_images($subject->douban_id);
+            
+            // Truncate card_subtitle to 250 chars (DB limit: 256)
+            $card_subtitle = sanitize_textarea_field($_POST['card_subtitle']);
+            if (mb_strlen($card_subtitle, 'UTF-8') > 250) {
+                $card_subtitle = mb_substr($card_subtitle, 0, 247, 'UTF-8') . '...';
+            }
+            
             $wpdb->update(
                 $wpdb->douban_movies,
                 [
                     'name' => sanitize_text_field($_POST['name']),
                     'douban_score' => floatval($_POST['douban_score']),
-                    'card_subtitle' => sanitize_textarea_field($_POST['card_subtitle']),
+                    'card_subtitle' => $card_subtitle,
                     'poster' => esc_url_raw($_POST['poster'])
                 ],
                 [

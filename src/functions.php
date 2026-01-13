@@ -1389,7 +1389,12 @@ class WPN_NeoDB
                             $fresh_data->name = $data['title'] ?? '';
                             $fresh_data->poster = $data['pic']['large'] ?? '';
                             $fresh_data->douban_score = $data['rating']['value'] ?? 0;
-                            $fresh_data->card_subtitle = $data['card_subtitle'] ?? '';
+                            // Truncate card_subtitle to 250 chars (DB limit: 256)
+                            $card_subtitle = $data['card_subtitle'] ?? '';
+                            if (mb_strlen($card_subtitle, 'UTF-8') > 250) {
+                                $card_subtitle = mb_substr($card_subtitle, 0, 247, 'UTF-8') . '...';
+                            }
+                            $fresh_data->card_subtitle = $card_subtitle;
                         }
                     }
                 }
@@ -1408,7 +1413,12 @@ class WPN_NeoDB
                             $fresh_data->name = $data['title'] ?? '';
                             $fresh_data->poster = $data['cover_image_url'] ?? '';
                             $fresh_data->douban_score = $data['rating'] ?? 0;
-                            $fresh_data->card_subtitle = $data['brief'] ?? '';
+                            // Truncate card_subtitle to 250 chars (DB limit: 256)
+                            $card_subtitle = $data['brief'] ?? '';
+                            if (mb_strlen($card_subtitle, 'UTF-8') > 250) {
+                                $card_subtitle = mb_substr($card_subtitle, 0, 247, 'UTF-8') . '...';
+                            }
+                            $fresh_data->card_subtitle = $card_subtitle;
                         }
                     }
                 }
@@ -1426,7 +1436,12 @@ class WPN_NeoDB
                             $fresh_data->name = $data['title'] ?? $data['name'] ?? '';
                             $fresh_data->poster = !empty($data['poster_path']) ? "https://image.tmdb.org/t/p/original" . $data['poster_path'] : '';
                             $fresh_data->douban_score = $data['vote_average'] ?? 0;
-                            $fresh_data->card_subtitle = $data['overview'] ?? '';
+                            // Truncate card_subtitle to 250 chars (DB limit: 256)
+                            $card_subtitle = $data['overview'] ?? '';
+                            if (mb_strlen($card_subtitle, 'UTF-8') > 250) {
+                                $card_subtitle = mb_substr($card_subtitle, 0, 247, 'UTF-8') . '...';
+                            }
+                            $fresh_data->card_subtitle = $card_subtitle;
                         }
                     }
                 }
