@@ -328,8 +328,17 @@ class Subject_ALL_Table extends \WP_List_Table
                 return $this->get_genres($item->id);
 
             case 'poster':
-                $cache_prefix = $item->neodb_id ? 'neodb_' : ($item->tmdb_type ? 'tmdb' : '');
-                $cache_id = $item->neodb_id ?: $item->douban_id;
+                // Determine cache prefix and ID based on available source IDs
+                if ($item->neodb_id) {
+                    $cache_prefix = 'neodb_';
+                    $cache_id = $item->neodb_id;
+                } elseif ($item->tmdb_id) {
+                    $cache_prefix = 'tmdb_';
+                    $cache_id = $item->tmdb_id;
+                } else {
+                    $cache_prefix = '';
+                    $cache_id = $item->douban_id;
+                }
                 return '<img src="' . $this->wpn_save_images($cache_id, $item->poster, $cache_prefix) . '" width="100" referrerpolicy="no-referrer">';
 
             case 'tmdb_type':

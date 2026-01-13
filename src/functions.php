@@ -598,7 +598,7 @@ class WPN_NeoDB
             $data->link = "https://www.themoviedb.org/{$type}/{$id}";
         }
         
-        $cover = $this->db_get_setting('download_image') ? $this->wpn_save_images($id, $data->poster, 'tmdb') : $data->poster;
+        $cover = $this->db_get_setting('download_image') ? $this->wpn_save_images($id, $data->poster, 'tmdb_') : $data->poster;
         return $this->render_enhanced_item_html($data, $cover);
     }
 
