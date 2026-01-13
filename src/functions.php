@@ -865,7 +865,7 @@ class WPN_NeoDB
                 'id' => $movie_id,
                 'name' => $data['title'] ?? $data['name'],
                 'poster' => "https://image.tmdb.org/t/p/original" . $data['poster_path'],
-                'douban_id' => $data['id'],
+                'douban_id' => 0,
                 'douban_score' => $data['vote_average'],
                 'link' => $data['homepage'],
                 'year' => '',
