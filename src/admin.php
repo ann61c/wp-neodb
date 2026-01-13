@@ -93,13 +93,13 @@ class WPN_ADMIN extends WPN_NeoDB
                     ]
                 );
             }
-            
+
             // Check if this is an AJAX request
             if (wp_doing_ajax() || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
                 wp_send_json_success(['message' => '保存成功']);
                 exit;
             }
-            
+
             $link = [
                 'page'                  => 'subject',
             ];
@@ -113,13 +113,13 @@ class WPN_ADMIN extends WPN_NeoDB
             $subject_id = intval($_POST['subject_id']);
             $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
             $this->wpn_remove_images($subject->douban_id);
-            
+
             // Truncate card_subtitle to 250 chars (DB limit: 256)
             $card_subtitle = sanitize_textarea_field($_POST['card_subtitle']);
             if (mb_strlen($card_subtitle, 'UTF-8') > 250) {
                 $card_subtitle = mb_substr($card_subtitle, 0, 247, 'UTF-8') . '...';
             }
-            
+
             $wpdb->update(
                 $wpdb->douban_movies,
                 [
@@ -132,13 +132,13 @@ class WPN_ADMIN extends WPN_NeoDB
                     'id' => $subject_id,
                 ]
             );
-            
+
             // Check if this is an AJAX request
             if (wp_doing_ajax() || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
                 wp_send_json_success(['message' => '保存成功']);
                 exit;
             }
-            
+
             $link = [
                 'page' => 'subject_all',
             ];

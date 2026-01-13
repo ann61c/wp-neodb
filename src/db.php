@@ -202,7 +202,7 @@ class db_sync extends WPN_NeoDB
                         }
 
                         // Batch processing: sleep after every batch_size items
-                        if ($processed_count > 0 && $processed_count % $batch_size == 0) {
+                        if ($processed_count > 0 && $processed_count % $batch_size === 0) {
                             $batch_count++;
                             $this->add_log('batch', 'sync', 'neodb', "Batch {$batch_count} complete ({$processed_count} items), sleeping {$batch_sleep}s...");
                             sleep($batch_sleep);
@@ -354,7 +354,7 @@ class db_sync extends WPN_NeoDB
                             }
 
                             // Batch processing: sleep after every batch_size items
-                            if ($total_processed > 0 && $total_processed % $batch_size == 0) {
+                            if ($total_processed > 0 && $total_processed % $batch_size === 0) {
                                 $batch_count++;
                                 $this->add_log($type, 'sync', 'douban', "Batch {$batch_count} complete ({$total_processed} items), sleeping {$batch_sleep}s...");
                                 sleep($batch_sleep);

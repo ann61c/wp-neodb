@@ -282,7 +282,7 @@ class WPN_NeoDB
                 $status_map = ['mark' => '想看', 'doing' => '在看', 'done' => '看过', 'dropped' => '不看了'];
                 $status_label = $status_map[$data->status] ?? 'Marked';
             }
-            $score_text = !empty($data->score) ? ' ' . $data->score . '分' : '';
+            $score_text = empty($data->score) ? '' : ' ' . $data->score . '分';
             $meta_items[] = date('Y-m-d', strtotime($data->fav_time)) . ' ' . $status_label . $score_text;
         }
 
@@ -336,7 +336,7 @@ class WPN_NeoDB
                 $wpdb->prepare("SELECT name FROM {$wpdb->douban_genres} WHERE movie_id = %d LIMIT 3", $data->id)
             );
             if (!empty($genres)) {
-                $genre_names = array_map(function($g) { return $g->name; }, $genres);
+                $genre_names = array_map(fn($g) => $g->name, $genres);
                 $meta_line[] = '类型: ' . esc_html(implode(' / ', $genre_names));
             }
         }
@@ -385,7 +385,7 @@ class WPN_NeoDB
             }
         }
         
-        if (!empty($meta_line)) {
+        if ($meta_line !== []) {
             $output .= '<div class="doulist-meta-line">' . implode(' / ', $meta_line) . '</div>';
         }
 
@@ -394,40 +394,7 @@ class WPN_NeoDB
         if (!empty($abstract)) {
             $output .= '<div class="abstract">' . esc_html($abstract) . '</div>';
         }
-
-        $output .= '</div></div></div>';
-        return $output;
-    }
-
-    /**
-     * Get tags/genres for an item
-     */
-    private function get_item_tags($data)
-    {
-        global $wpdb;
-        $tags = [];
-        
-        // Get from genres table
-        if (!empty($data->id)) {
-            $genres = $wpdb->get_results(
-                $wpdb->prepare("SELECT name FROM {$wpdb->douban_genres} WHERE movie_id = %d", $data->id)
-            );
-            foreach ($genres as $genre) {
-                $tags[] = $genre->name;
-            }
-        }
-        
-        // Add year as a tag if available
-        if (!empty($data->year)) {
-            array_unshift($tags, $data->year);
-            // Add decade tag too
-            $decade = (floor($data->year / 10) * 10) . 's';
-            if (!in_array($decade, $tags)) {
-                array_unshift($tags, $decade);
-            }
-        }
-        
-        return array_slice($tags, 0, 6); // Limit to 6 tags
+        return $output . '</div></div></div>';
     }
 
     /**
@@ -454,9 +421,7 @@ class WPN_NeoDB
         if (empty($items) || !is_array($items)) {
             return '';
         }
-        $names = array_map(function($item) {
-            return is_array($item) ? ($item['name'] ?? 'Unknown') : $item;
-        }, array_slice($items, 0, $limit));
+        $names = array_map(fn($item) => is_array($item) ? ($item['name'] ?? 'Unknown') : $item, array_slice($items, 0, $limit));
         return implode(' / ', $names);
     }
 
@@ -471,55 +436,57 @@ class WPN_NeoDB
         $resources = $this->parse_json_field($data, 'external_resources');
         
         foreach ($resources as $resource) {
-            if (empty($resource['url'])) continue;
+            if (empty($resource['url'])) {
+                continue;
+            }
             $url = $resource['url'];
             
             // Check known websites and assign appropriate class
-            if (strpos($url, 'douban.com') !== false) {
+            if (str_contains($url, 'douban.com')) {
                 $links[] = ['url' => $url, 'name' => '豆瓣', 'class' => 'douban'];
-            } elseif (strpos($url, 'themoviedb.org') !== false) {
+            } elseif (str_contains($url, 'themoviedb.org')) {
                 $links[] = ['url' => $url, 'name' => 'TMDB', 'class' => 'tmdb'];
-            } elseif (strpos($url, 'imdb.com') !== false) {
+            } elseif (str_contains($url, 'imdb.com')) {
                 $links[] = ['url' => $url, 'name' => 'IMDb', 'class' => 'imdb'];
-            } elseif (strpos($url, 'wikidata.org') !== false) {
+            } elseif (str_contains($url, 'wikidata.org')) {
                 $links[] = ['url' => $url, 'name' => '维基数据', 'class' => 'wikidata'];
-            } elseif (strpos($url, 'spotify.com') !== false) {
+            } elseif (str_contains($url, 'spotify.com')) {
                 $links[] = ['url' => $url, 'name' => 'Spotify', 'class' => 'spotify'];
-            } elseif (strpos($url, 'goodreads.com') !== false) {
+            } elseif (str_contains($url, 'goodreads.com')) {
                 $links[] = ['url' => $url, 'name' => 'Goodreads', 'class' => 'goodreads'];
-            } elseif (strpos($url, 'steam') !== false) {
+            } elseif (str_contains($url, 'steam')) {
                 $links[] = ['url' => $url, 'name' => 'Steam', 'class' => 'steam'];
-            } elseif (strpos($url, 'igdb.com') !== false) {
+            } elseif (str_contains($url, 'igdb.com')) {
                 $links[] = ['url' => $url, 'name' => 'IGDB', 'class' => 'igdb'];
-            } elseif (strpos($url, 'bangumi.tv') !== false || strpos($url, 'bgm.tv') !== false) {
+            } elseif (str_contains($url, 'bangumi.tv') || str_contains($url, 'bgm.tv')) {
                 $links[] = ['url' => $url, 'name' => 'Bangumi', 'class' => 'bangumi'];
-            } elseif (strpos($url, 'archiveofourown.org') !== false) {
+            } elseif (str_contains($url, 'archiveofourown.org')) {
                 $links[] = ['url' => $url, 'name' => 'AO3', 'class' => 'ao3'];
-            } elseif (strpos($url, 'qidian.com') !== false) {
+            } elseif (str_contains($url, 'qidian.com')) {
                 $links[] = ['url' => $url, 'name' => '起点中文网', 'class' => 'qidian'];
-            } elseif (strpos($url, 'jjwxc.net') !== false) {
+            } elseif (str_contains($url, 'jjwxc.net')) {
                 $links[] = ['url' => $url, 'name' => '晋江文学城', 'class' => 'jjwxc'];
-            } elseif (strpos($url, 'boardgamegeek.com') !== false) {
+            } elseif (str_contains($url, 'boardgamegeek.com')) {
                 $links[] = ['url' => $url, 'name' => 'BGG', 'class' => 'bgg'];
-            } elseif (strpos($url, 'books.com.tw') !== false) {
+            } elseif (str_contains($url, 'books.com.tw')) {
                 $links[] = ['url' => $url, 'name' => '博客来', 'class' => 'bookstw'];
-            } elseif (strpos($url, 'books.google') !== false) {
+            } elseif (str_contains($url, 'books.google')) {
                 $links[] = ['url' => $url, 'name' => 'Google Books', 'class' => 'googlebooks'];
-            } elseif (strpos($url, 'bandcamp.com') !== false) {
+            } elseif (str_contains($url, 'bandcamp.com')) {
                 $links[] = ['url' => $url, 'name' => 'Bandcamp', 'class' => 'bandcamp'];
-            } elseif (strpos($url, 'discogs.com') !== false) {
+            } elseif (str_contains($url, 'discogs.com')) {
                 $links[] = ['url' => $url, 'name' => 'Discogs', 'class' => 'discogs'];
-            } elseif (strpos($url, 'musicbrainz.org') !== false) {
+            } elseif (str_contains($url, 'musicbrainz.org')) {
                 $links[] = ['url' => $url, 'name' => 'MusicBrainz', 'class' => 'musicbrainz'];
-            } elseif (strpos($url, 'openlibrary.org') !== false) {
+            } elseif (str_contains($url, 'openlibrary.org')) {
                 $links[] = ['url' => $url, 'name' => 'Open Library', 'class' => 'openlibrary'];
-            } elseif (strpos($url, 'music.apple.com') !== false) {
+            } elseif (str_contains($url, 'music.apple.com')) {
                 $links[] = ['url' => $url, 'name' => 'Apple Music', 'class' => 'apple_music'];
-            } elseif (strpos($url, 'xiaoyuzhoufm.com') !== false) {
+            } elseif (str_contains($url, 'xiaoyuzhoufm.com')) {
                 $links[] = ['url' => $url, 'name' => '小宇宙', 'class' => 'rss'];
             } elseif (preg_match('/^https?:\/\/feed\./i', $url)) {
                 $links[] = ['url' => $url, 'name' => 'RSS', 'class' => 'rss'];
-            } elseif (strpos($url, 'neodb.') !== false || strpos($url, 'minreol.dk') !== false) {
+            } elseif (str_contains($url, 'neodb.') || str_contains($url, 'minreol.dk')) {
                 // Recognize NeoDB instances (neodb.social, neodb.kevga.de, minreol.dk, etc.)
                 $links[] = ['url' => $url, 'name' => 'NeoDB', 'class' => 'fedi'];
             } else {
@@ -533,7 +500,7 @@ class WPN_NeoDB
         }
 
         // Fallback: generate links from IDs if no external_resources
-        if (empty($links)) {
+        if ($links === []) {
             if (!empty($data->douban_id)) {
                 $douban_type = $data->type === 'book' ? 'book' : 'movie';
                 $links[] = ['url' => "https://{$douban_type}.douban.com/subject/{$data->douban_id}/", 'name' => '豆瓣', 'class' => 'douban'];
@@ -1091,9 +1058,15 @@ class WPN_NeoDB
                 $parent_data = json_decode(wp_remote_retrieve_body($parent_response), true);
                 if ($parent_data) {
                     // Merge missing fields
-                    if (empty($data['description'])) $data['description'] = $parent_data['description'] ?? '';
-                    if (empty($data['brief'])) $data['brief'] = $parent_data['brief'] ?? '';
-                    if (empty($data['genre']) && !empty($parent_data['genre'])) $data['genre'] = $parent_data['genre'];
+                    if (empty($data['description'])) {
+                        $data['description'] = $parent_data['description'] ?? '';
+                    }
+                    if (empty($data['brief'])) {
+                        $data['brief'] = $parent_data['brief'] ?? '';
+                    }
+                    if (empty($data['genre']) && !empty($parent_data['genre'])) {
+                        $data['genre'] = $parent_data['genre'];
+                    }
                 }
             }
         }
@@ -1101,8 +1074,12 @@ class WPN_NeoDB
         // Map NeoDB type to WP-NeoDB type
         // Normalize neodb_type for mapping (tv/season -> tv, performance/production -> performance)
         $normalized_type = preg_replace('#^(tv/season|performance/production)$#', '$1', $neodb_type);
-        if ($normalized_type === 'tv/season') $normalized_type = 'tv';
-        if ($normalized_type === 'performance/production') $normalized_type = 'performance';
+        if ($normalized_type === 'tv/season') {
+            $normalized_type = 'tv';
+        }
+        if ($normalized_type === 'performance/production') {
+            $normalized_type = 'performance';
+        }
         
         $type_map = [
             'book' => 'book',
@@ -1472,7 +1449,7 @@ class WPN_NeoDB
                         $data = json_decode(wp_remote_retrieve_body($response), true);
                         if ($data && !isset($data['success']) && !isset($data['status_code'])) {
                             $fresh_data->name = $data['title'] ?? $data['name'] ?? '';
-                            $fresh_data->poster = !empty($data['poster_path']) ? "https://image.tmdb.org/t/p/original" . $data['poster_path'] : '';
+                            $fresh_data->poster = empty($data['poster_path']) ? '' : "https://image.tmdb.org/t/p/original" . $data['poster_path'];
                             $fresh_data->douban_score = $data['vote_average'] ?? 0;
                             // Truncate card_subtitle to 250 chars (DB limit: 256)
                             $card_subtitle = $data['overview'] ?? '';
@@ -1508,7 +1485,7 @@ class WPN_NeoDB
         }
 
 
-        if (empty((array)$fresh_data)) {
+        if ((array)$fresh_data === []) {
             return ['success' => false, 'message' => 'Failed to fetch data from ' . $source];
         }
 
