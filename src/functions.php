@@ -60,6 +60,40 @@ class WPN_NeoDB
         ];
     }
 
+    protected function get_site_mapping()
+    {
+        return [
+            'douban.com' => ['name' => '豆瓣', 'class' => 'douban'],
+            'themoviedb.org' => ['name' => 'TMDB', 'class' => 'tmdb'],
+            'imdb.com' => ['name' => 'IMDb', 'class' => 'imdb'],
+            'wikidata.org' => ['name' => '维基数据', 'class' => 'wikidata'],
+            'spotify.com' => ['name' => 'Spotify', 'class' => 'spotify'],
+            'goodreads.com' => ['name' => 'Goodreads', 'class' => 'goodreads'],
+            'steampowered.com' => ['name' => 'Steam', 'class' => 'steam'],
+            'steamcommunity.com' => ['name' => 'Steam', 'class' => 'steam'],
+            'igdb.com' => ['name' => 'IGDB', 'class' => 'igdb'],
+            'bangumi.tv' => ['name' => 'Bangumi', 'class' => 'bangumi'],
+            'bgm.tv' => ['name' => 'Bangumi', 'class' => 'bangumi'],
+            'archiveofourown.org' => ['name' => 'AO3', 'class' => 'ao3'],
+            'qidian.com' => ['name' => '起点中文网', 'class' => 'qidian'],
+            'jjwxc.net' => ['name' => '晋江文学城', 'class' => 'jjwxc'],
+            'boardgamegeek.com' => ['name' => 'BGG', 'class' => 'bgg'],
+            'books.com.tw' => ['name' => '博客来', 'class' => 'bookstw'],
+            'books.google' => ['name' => 'Google Books', 'class' => 'googlebooks'],
+            'bandcamp.com' => ['name' => 'Bandcamp', 'class' => 'bandcamp'],
+            'discogs.com' => ['name' => 'Discogs', 'class' => 'discogs'],
+            'musicbrainz.org' => ['name' => 'MusicBrainz', 'class' => 'musicbrainz'],
+            'openlibrary.org' => ['name' => 'Open Library', 'class' => 'openlibrary'],
+            'music.apple.com' => ['name' => 'Apple Music', 'class' => 'apple_music'],
+            'xiaoyuzhoufm.com' => ['name' => '小宇宙', 'class' => 'rss'],
+            '/^https?:\/\/feed\./i' => ['name' => 'RSS', 'class' => 'rss'],
+            'neodb.' => ['name' => 'NeoDB', 'class' => 'fedi'],
+            'minreol.dk' => ['name' => 'minreol.dk', 'class' => 'fedi'],
+            'eggplant.place' => ['name' => 'eggplant.place', 'class' => 'fedi'],
+            'fantastika.social' => ['name' => 'fantastika.social', 'class' => 'fedi'],
+        ];
+    }
+
     public function add_log($type = 'movie', $action = 'sync', $source = 'douban', $message = '')
     {
         global $wpdb;
@@ -441,55 +475,31 @@ class WPN_NeoDB
             }
             $url = $resource['url'];
             
-            // Check known websites and assign appropriate class
-            if (str_contains($url, 'douban.com')) {
-                $links[] = ['url' => $url, 'name' => '豆瓣', 'class' => 'douban'];
-            } elseif (str_contains($url, 'themoviedb.org')) {
-                $links[] = ['url' => $url, 'name' => 'TMDB', 'class' => 'tmdb'];
-            } elseif (str_contains($url, 'imdb.com')) {
-                $links[] = ['url' => $url, 'name' => 'IMDb', 'class' => 'imdb'];
-            } elseif (str_contains($url, 'wikidata.org')) {
-                $links[] = ['url' => $url, 'name' => '维基数据', 'class' => 'wikidata'];
-            } elseif (str_contains($url, 'spotify.com')) {
-                $links[] = ['url' => $url, 'name' => 'Spotify', 'class' => 'spotify'];
-            } elseif (str_contains($url, 'goodreads.com')) {
-                $links[] = ['url' => $url, 'name' => 'Goodreads', 'class' => 'goodreads'];
-            } elseif (str_contains($url, 'steam')) {
-                $links[] = ['url' => $url, 'name' => 'Steam', 'class' => 'steam'];
-            } elseif (str_contains($url, 'igdb.com')) {
-                $links[] = ['url' => $url, 'name' => 'IGDB', 'class' => 'igdb'];
-            } elseif (str_contains($url, 'bangumi.tv') || str_contains($url, 'bgm.tv')) {
-                $links[] = ['url' => $url, 'name' => 'Bangumi', 'class' => 'bangumi'];
-            } elseif (str_contains($url, 'archiveofourown.org')) {
-                $links[] = ['url' => $url, 'name' => 'AO3', 'class' => 'ao3'];
-            } elseif (str_contains($url, 'qidian.com')) {
-                $links[] = ['url' => $url, 'name' => '起点中文网', 'class' => 'qidian'];
-            } elseif (str_contains($url, 'jjwxc.net')) {
-                $links[] = ['url' => $url, 'name' => '晋江文学城', 'class' => 'jjwxc'];
-            } elseif (str_contains($url, 'boardgamegeek.com')) {
-                $links[] = ['url' => $url, 'name' => 'BGG', 'class' => 'bgg'];
-            } elseif (str_contains($url, 'books.com.tw')) {
-                $links[] = ['url' => $url, 'name' => '博客来', 'class' => 'bookstw'];
-            } elseif (str_contains($url, 'books.google')) {
-                $links[] = ['url' => $url, 'name' => 'Google Books', 'class' => 'googlebooks'];
-            } elseif (str_contains($url, 'bandcamp.com')) {
-                $links[] = ['url' => $url, 'name' => 'Bandcamp', 'class' => 'bandcamp'];
-            } elseif (str_contains($url, 'discogs.com')) {
-                $links[] = ['url' => $url, 'name' => 'Discogs', 'class' => 'discogs'];
-            } elseif (str_contains($url, 'musicbrainz.org')) {
-                $links[] = ['url' => $url, 'name' => 'MusicBrainz', 'class' => 'musicbrainz'];
-            } elseif (str_contains($url, 'openlibrary.org')) {
-                $links[] = ['url' => $url, 'name' => 'Open Library', 'class' => 'openlibrary'];
-            } elseif (str_contains($url, 'music.apple.com')) {
-                $links[] = ['url' => $url, 'name' => 'Apple Music', 'class' => 'apple_music'];
-            } elseif (str_contains($url, 'xiaoyuzhoufm.com')) {
-                $links[] = ['url' => $url, 'name' => '小宇宙', 'class' => 'rss'];
-            } elseif (preg_match('/^https?:\/\/feed\./i', $url)) {
-                $links[] = ['url' => $url, 'name' => 'RSS', 'class' => 'rss'];
-            } elseif (str_contains($url, 'neodb.') || str_contains($url, 'minreol.dk')) {
-                // Recognize NeoDB instances (neodb.social, neodb.kevga.de, minreol.dk, etc.)
-                $links[] = ['url' => $url, 'name' => 'NeoDB', 'class' => 'fedi'];
-            } else {
+            $url = $resource['url'];
+            
+            // Check known websites using map
+            $site_map = $this->get_site_mapping();
+            $matched = false;
+            
+            foreach ($site_map as $key => $site_info) {
+                // If key starts with /, treat as regex
+                if (str_starts_with($key, '/')) {
+                    if (preg_match($key, $url)) {
+                        $links[] = ['url' => $url, 'name' => $site_info['name'], 'class' => $site_info['class']];
+                        $matched = true;
+                        break;
+                    }
+                } else {
+                    // Treat as string containment
+                    if (str_contains($url, $key)) {
+                        $links[] = ['url' => $url, 'name' => $site_info['name'], 'class' => $site_info['class']];
+                        $matched = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!$matched) {
                 // For unrecognized URLs, extract hostname as name
                 $parsed = parse_url($url);
                 $hostname = $parsed['host'] ?? 'Link';
@@ -1574,6 +1584,10 @@ class WPN_NeoDB
             }
         }
 
+
+
+        // Parse external resources for frontend consumption
+        $movie->formatted_external_resources = $this->parse_external_resources($movie);
 
         return $movie;
     }

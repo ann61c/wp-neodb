@@ -352,18 +352,12 @@ class WP_NEODB {
                                 
                                 // Build external links badges (inline)
                                 let badgesHtml = '';
-                                externalResources.forEach(res => {
-                                    if (!res.url) return;
-                                    let name = '', cls = '';
-                                    if (res.url.includes('douban.com')) { name = '豆瓣'; cls = 'douban'; }
-                                    else if (res.url.includes('themoviedb.org')) { name = 'TMDB'; cls = 'tmdb'; }
-                                    else if (res.url.includes('imdb.com')) { name = 'IMDb'; cls = 'imdb'; }
-                                    else if (res.url.includes('wikidata.org')) { name = '维基数据'; cls = 'wikidata'; }
-                                    else if (res.url.includes('spotify.com')) { name = 'Spotify'; cls = 'spotify'; }
-                                    else if (res.url.includes('igdb.com')) { name = 'IGDB'; cls = 'igdb'; }
-                                    else if (res.url.includes('steampowered.com') || res.url.includes('steamcommunity.com')) { name = 'Steam'; cls = 'steam'; }
-                                    if (name) badgesHtml += ` <a href="${res.url}" class="${cls}" target="_blank" rel="noopener noreferrer">${name}</a>`;
-                                });
+                                // Use PHP-parsed external resources
+                                if (movie.formatted_external_resources) {
+                                    movie.formatted_external_resources.forEach(res => {
+                                        badgesHtml += ` <a href="${res.url}" class="${res.class}" target="_blank" rel="noopener noreferrer">${res.name}</a>`;
+                                    });
+                                }
 
                                 // Type
                                 const typeMap = {movie: '影视', book: '书籍', music: '音乐', game: '游戏', drama: '戏剧', tv: '剧集', podcast: '播客'};
