@@ -45,7 +45,8 @@
                         $available_sources[] = ['name' => 'TMDB', 'id' => $subject->tmdb_id . ' (' . $subject->tmdb_type . ')', 'param' => 'tmdb'];
                     }
                 } else {
-                    // For editing user favorites, only show NeoDB (it has user marking data)
+                    // For editing user favorites (edit_fave mode), only show NeoDB
+                    // NeoDB is the only source that supports syncing user marking data (status, rating, comment, time)
                     if (!empty($subject->neodb_id)) {
                         $available_sources[] = ['name' => 'NeoDB', 'id' => $subject->neodb_id, 'param' => 'neodb'];
                     }
