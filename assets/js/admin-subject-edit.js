@@ -131,4 +131,48 @@ jQuery(document).ready(function($) {
             input.trigger('input'); // Trigger input event to hide button and remove class
         }
     });
+    
+    // AJAX form submission for save
+    $('#wpn-edit-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var submitBtn = form.find('input[type="submit"]');
+        var originalBtnValue = submitBtn.val();
+        
+        // Disable submit button and show loading
+        submitBtn.prop('disabled', true).val('保存中...');
+        
+        // Send AJAX request
+        $.ajax({
+            url: form.attr('action') || window.location.href,
+            method: 'POST',
+            data: form.serialize(),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                // Show success message
+                showStatus('<span class="dashicons dashicons-yes-alt"></span> 保存成功', 'success');
+                
+                // Update all original values to current values (so revert buttons hide)
+                $('input, textarea').each(function() {
+                    var input = $(this);
+                    if (input.next('.revert-btn').length) {
+                        input.data('original-value', input.val());
+                        input.removeClass('previewing');
+                        input.next('.revert-btn').hide();
+                    }
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Save Error:', xhr.responseText);
+                showStatus('<span class="dashicons dashicons-warning"></span> 保存失败: ' + error, 'error');
+            },
+            complete: function() {
+                // Restore submit button
+                submitBtn.prop('disabled', false).val(originalBtnValue);
+            }
+        });
+    });
 });

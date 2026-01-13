@@ -6,7 +6,7 @@
     $fave = $subject_id ? $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE subject_id = '{$subject_id}'") : "";
     $action = $_GET['action'] ?: 'edit_fave';
     ?>
-    <form method="post">
+    <form method="post" id="wpn-edit-form">
         <table class="form-table">
             <tbody>
                 <tr valign="top">
@@ -81,8 +81,8 @@
                         </p>
                     </td>
                 </tr>
-                <div id="wpn-snackbar" class="refresh-status"></div>
                 <?php endif; ?>
+                <div id="wpn-snackbar" class="refresh-status"></div>
                 <?php if ($action == 'edit_subject') : ?>
                     <tr valign="top">
                         <th scope="row"><label for="url">海报地址</label></th>

@@ -93,6 +93,13 @@ class WPN_ADMIN extends WPN_NeoDB
                     ]
                 );
             }
+            
+            // Check if this is an AJAX request
+            if (wp_doing_ajax() || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                wp_send_json_success(['message' => '保存成功']);
+                exit;
+            }
+            
             $link = [
                 'page'                  => 'subject',
             ];
@@ -125,6 +132,13 @@ class WPN_ADMIN extends WPN_NeoDB
                     'id' => $subject_id,
                 ]
             );
+            
+            // Check if this is an AJAX request
+            if (wp_doing_ajax() || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                wp_send_json_success(['message' => '保存成功']);
+                exit;
+            }
+            
             $link = [
                 'page' => 'subject_all',
             ];
