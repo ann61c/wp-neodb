@@ -62,6 +62,12 @@ class db_sync extends WPN_NeoDB
             return false;
         }
 
+        // Performance optimization: batch processing to prevent resource exhaustion
+        set_time_limit(1200); // Allow up to 20 minutes max
+        $batch_size = 50;     // Process 50 items per batch
+        $batch_sleep = 3;     // Sleep 3 seconds between batches
+        $batch_count = 0;
+
         global $wpdb;
 
         // Map NeoDB shelf types to WP-NeoDB status
@@ -194,6 +200,13 @@ class db_sync extends WPN_NeoDB
                                 }
                             }
                         }
+
+                        // Batch processing: sleep after every batch_size items
+                        if ($processed_count > 0 && $processed_count % $batch_size == 0) {
+                            $batch_count++;
+                            $this->add_log('batch', 'sync', 'neodb', "Batch {$batch_count} complete ({$processed_count} items), sleeping {$batch_sleep}s...");
+                            sleep($batch_sleep);
+                        }
                     }
 
                     // Check pagination
@@ -205,7 +218,7 @@ class db_sync extends WPN_NeoDB
 
         // Log the sync
         if ($processed_count > 0) {
-            $this->add_log('batch', 'sync', 'neodb', "processed {$processed_count} items");
+            $this->add_log('batch', 'sync', 'neodb', "Sync complete: processed {$processed_count} items in {$batch_count} batches");
         }
 
         return $processed_count;
@@ -213,6 +226,12 @@ class db_sync extends WPN_NeoDB
 
     public function db_sync_data()
     {
+        // Performance optimization: batch processing to prevent resource exhaustion
+        set_time_limit(1200); // Allow up to 20 minutes max
+        $batch_size = 50;     // Process 50 items per batch
+        $batch_sleep = 3;     // Sleep 3 seconds between batches
+        $batch_count = 0;
+        $total_processed = 0;
 
         $sync_types = [
             'movie',
@@ -297,6 +316,7 @@ class db_sync extends WPN_NeoDB
                                             'status' => $interest['status'],
                                         ]
                                     );
+                                    $total_processed++;
                                 }
                             } else {
                                 $movie_id = $movie->id;
@@ -313,6 +333,7 @@ class db_sync extends WPN_NeoDB
                                             'type' => $type,
                                         ]
                                     );
+                                    $total_processed++;
                                 } elseif ($fav->status != $interest['status']) {
                                     $wpdb->update(
                                         $wpdb->douban_faves,
@@ -326,9 +347,17 @@ class db_sync extends WPN_NeoDB
                                             'id' => $fav->id,
                                         ]
                                     );
+                                    $total_processed++;
                                 } else {
                                     $confition = false;
                                 }
+                            }
+
+                            // Batch processing: sleep after every batch_size items
+                            if ($total_processed > 0 && $total_processed % $batch_size == 0) {
+                                $batch_count++;
+                                $this->add_log($type, 'sync', 'douban', "Batch {$batch_count} complete ({$total_processed} items), sleeping {$batch_sleep}s...");
+                                sleep($batch_sleep);
                             }
                         }
                         $i++;
@@ -337,6 +366,11 @@ class db_sync extends WPN_NeoDB
             }
             $this->add_log($type, 'sync', 'douban');
         }
+        
+        if ($total_processed > 0) {
+            $this->add_log('batch', 'sync', 'douban', "Sync complete: processed {$total_processed} items in {$batch_count} batches");
+        }
+        
         return null;
     }
 }

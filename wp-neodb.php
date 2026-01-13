@@ -211,12 +211,49 @@ function wpn_install()
                 $wpdb->query("ALTER TABLE {$wpdb->douban_movies} ADD COLUMN `{$col}` {$col_type}");
             }
         }
+        
+        // Performance optimization: Add indexes for common queries
+        // Check and add missing indexes to prevent slow queries
+        $existing_indexes = $wpdb->get_results("SHOW INDEX FROM {$wpdb->douban_movies}");
+        $index_names = array_column($existing_indexes, 'Key_name');
+        
+        // Index for name search (prefix index for VARCHAR)
+        if (!in_array('idx_name', $index_names)) {
+            $wpdb->query("CREATE INDEX idx_name ON {$wpdb->douban_movies} (name(100))");
+        }
+        
+        // Composite index for type + faves sorting (common admin query)
+        if (!in_array('idx_type_faves', $index_names)) {
+            $wpdb->query("CREATE INDEX idx_type_faves ON {$wpdb->douban_movies} (type, faves)");
+        }
+        
+        // Index for pubdate filtering/sorting
+        if (!in_array('idx_pubdate', $index_names)) {
+            $wpdb->query("CREATE INDEX idx_pubdate ON {$wpdb->douban_movies} (pubdate)");
+        }
+        
+        // Index for year filtering
+        if (!in_array('idx_year', $index_names)) {
+            $wpdb->query("CREATE INDEX idx_year ON {$wpdb->douban_movies} (year)");
+        }
     }
 
     // Add source column to log table for existing installations
     if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_log}'") == $wpdb->douban_log && !$wpdb->get_results("SHOW COLUMNS FROM {$wpdb->douban_log} LIKE 'source'")) {
         $wpdb->query($update_table['log_source']);
     }
+    
+    // Performance optimization: Add index to faves table for faster joins
+    if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->douban_faves}'") == $wpdb->douban_faves) {
+        $faves_indexes = $wpdb->get_results("SHOW INDEX FROM {$wpdb->douban_faves}");
+        $faves_index_names = array_column($faves_indexes, 'Key_name');
+        
+        // Composite index for type + status filtering (common query)
+        if (!in_array('idx_type_status', $faves_index_names)) {
+            $wpdb->query("CREATE INDEX idx_type_status ON {$wpdb->douban_faves} (type, status)");
+        }
+    }
+    
     update_option('wpn_db_version', WPN_VERSION);
 }
 
