@@ -301,7 +301,7 @@ class WPN_NeoDB
         }
 
         if (!empty($data->type)) {
-            $type_map = ['movie' => '电影', 'book' => '书籍', 'music' => '音乐', 'game' => '游戏', 'drama' => '戏剧', 'tv' => '剧集', 'podcast' => '播客'];
+            $type_map = ['movie' => '影视', 'book' => '书籍', 'music' => '音乐', 'game' => '游戏', 'drama' => '戏剧', 'tv' => '剧集', 'podcast' => '播客'];
             $output .= ' <span class="doulist-category">[' . ($type_map[$data->type] ?? $data->type) . ']</span>';
         }
         
@@ -493,8 +493,34 @@ class WPN_NeoDB
                 $links[] = ['url' => $url, 'name' => 'IGDB', 'class' => 'igdb'];
             } elseif (strpos($url, 'bangumi.tv') !== false || strpos($url, 'bgm.tv') !== false) {
                 $links[] = ['url' => $url, 'name' => 'Bangumi', 'class' => 'bangumi'];
-            } elseif (strpos($url, 'neodb.') !== false) {
-                // Recognize all NeoDB instances (neodb.social, neodb.kevga.de, etc.)
+            } elseif (strpos($url, 'archiveofourown.org') !== false) {
+                $links[] = ['url' => $url, 'name' => 'AO3', 'class' => 'ao3'];
+            } elseif (strpos($url, 'qidian.com') !== false) {
+                $links[] = ['url' => $url, 'name' => '起点中文网', 'class' => 'qidian'];
+            } elseif (strpos($url, 'jjwxc.net') !== false) {
+                $links[] = ['url' => $url, 'name' => '晋江文学城', 'class' => 'jjwxc'];
+            } elseif (strpos($url, 'boardgamegeek.com') !== false) {
+                $links[] = ['url' => $url, 'name' => 'BGG', 'class' => 'bgg'];
+            } elseif (strpos($url, 'books.com.tw') !== false) {
+                $links[] = ['url' => $url, 'name' => '博客来', 'class' => 'bookstw'];
+            } elseif (strpos($url, 'books.google') !== false) {
+                $links[] = ['url' => $url, 'name' => 'Google Books', 'class' => 'googlebooks'];
+            } elseif (strpos($url, 'bandcamp.com') !== false) {
+                $links[] = ['url' => $url, 'name' => 'Bandcamp', 'class' => 'bandcamp'];
+            } elseif (strpos($url, 'discogs.com') !== false) {
+                $links[] = ['url' => $url, 'name' => 'Discogs', 'class' => 'discogs'];
+            } elseif (strpos($url, 'musicbrainz.org') !== false) {
+                $links[] = ['url' => $url, 'name' => 'MusicBrainz', 'class' => 'musicbrainz'];
+            } elseif (strpos($url, 'openlibrary.org') !== false) {
+                $links[] = ['url' => $url, 'name' => 'Open Library', 'class' => 'openlibrary'];
+            } elseif (strpos($url, 'music.apple.com') !== false) {
+                $links[] = ['url' => $url, 'name' => 'Apple Music', 'class' => 'apple_music'];
+            } elseif (strpos($url, 'xiaoyuzhoufm.com') !== false) {
+                $links[] = ['url' => $url, 'name' => '小宇宙', 'class' => 'rss'];
+            } elseif (preg_match('/^https?:\/\/feed\./i', $url)) {
+                $links[] = ['url' => $url, 'name' => 'RSS', 'class' => 'rss'];
+            } elseif (strpos($url, 'neodb.') !== false || strpos($url, 'minreol.dk') !== false) {
+                // Recognize NeoDB instances (neodb.social, neodb.kevga.de, minreol.dk, etc.)
                 $links[] = ['url' => $url, 'name' => 'NeoDB', 'class' => 'fedi'];
             } else {
                 // For unrecognized URLs, extract hostname as name

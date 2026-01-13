@@ -366,7 +366,7 @@ class WP_NEODB {
                                 });
 
                                 // Type
-                                const typeMap = {movie: '电影', book: '书籍', music: '音乐', game: '游戏', drama: '戏剧', tv: '剧集', podcast: '播客'};
+                                const typeMap = {movie: '影视', book: '书籍', music: '音乐', game: '游戏', drama: '戏剧', tv: '剧集', podcast: '播客'};
                                 const typePart = movie.type ? ` <span class="doulist-category">[${typeMap[movie.type] || movie.type}]</span> ` : '';
                                 
                                 // Build Header

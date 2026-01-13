@@ -157,7 +157,7 @@ class Subject_ALL_Table extends \WP_List_Table
 
         $types = [
             'all'      => '所有条目',
-            'movie' => '电影',
+            'movie' => '影视',
             'book'     => '图书',
             'music'   => '音乐',
             'game'   => '游戏',
