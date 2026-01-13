@@ -695,11 +695,26 @@ class WPN_NeoDB
                 $update_data['tmdb_type'] = $external_ids['tmdb_type'];
             }
             // Update metadata fields for NeoDB-style display
-            if (isset($data['director'])) {
-                $update_data['director'] = json_encode($data['director']);
+            // Map generic fields from type-specific NeoDB fields
+            $director = $data['director'] ?? $data['directors'] ?? null;
+            $actor = $data['actor'] ?? $data['actors'] ?? null;
+            
+            if ($movie->type === 'book') {
+                $director = $data['author'] ?? $data['authors'] ?? $director;
+                $actor = $data['translator'] ?? $data['translators'] ?? $actor;
+            } elseif ($movie->type === 'game') {
+                $director = $data['developer'] ?? $data['developers'] ?? $director;
+                $actor = $data['publisher'] ?? $data['publishers'] ?? $actor;
+            } elseif ($movie->type === 'music') {
+                $director = $data['artist'] ?? $data['artists'] ?? $director;
+                $actor = $data['company'] ?? $data['companies'] ?? $actor;
             }
-            if (isset($data['actor'])) {
-                $update_data['actor'] = json_encode($data['actor']);
+
+            if (isset($director)) {
+                $update_data['director'] = json_encode($director);
+            }
+            if (isset($actor)) {
+                $update_data['actor'] = json_encode($actor);
             }
             if (!empty($data['orig_title'])) {
                 $update_data['orig_title'] = $data['orig_title'];
@@ -1124,6 +1139,9 @@ class WPN_NeoDB
         } elseif ($type === 'game') {
             $director = $data['developer'] ?? $data['developers'] ?? $director;
             $actor = $data['publisher'] ?? $data['publishers'] ?? $actor;
+        } elseif ($type === 'music') {
+            $director = $data['artist'] ?? $data['artists'] ?? $director;
+            $actor = $data['company'] ?? $data['companies'] ?? $actor;
         }
 
         // Prepare data for insertion/update
