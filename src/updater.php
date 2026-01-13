@@ -155,15 +155,31 @@ class WPN_Updater {
     public function upgrader_source_selection($source, $remote_source, $upgrader, $hook_extra = null) {
         global $wp_filesystem;
 
-        if (isset($hook_extra['plugin']) && $hook_extra['plugin'] === $this->plugin) {
-            $correct_source = trailingslashit($remote_source) . dirname($this->basename);
-            if ($source !== $correct_source) {
-                // If the folder name is different (e.g. from GitHub source zip), rename it
-                $wp_filesystem->move($source, $correct_source);
-                return $correct_source;
-            }
+        // Exit if not our plugin
+        if (!isset($hook_extra['plugin']) || $hook_extra['plugin'] !== $this->plugin) {
+            return $source;
         }
 
+        // The destination folder name we want
+        $proper_folder_name = dirname($this->basename); // "wp-neodb"
+        
+        // The current folder name where files are extracted
+        $current_folder_name = basename(untrailingslashit($source));
+
+        // If it's already correct, do nothing
+        if ($current_folder_name === $proper_folder_name) {
+            return $source;
+        }
+
+        // Construct the new correct source path
+        $new_source = trailingslashit(dirname($source)) . $proper_folder_name;
+
+        // Move files from random github-name-folder to wp-neodb
+        if ($wp_filesystem->move($source, $new_source)) {
+            return trailingslashit($new_source);
+        }
+
+        // If move failed, return original source (better than crashing, though might still fail validation)
         return $source;
     }
 }
