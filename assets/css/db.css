@@ -186,7 +186,8 @@
     font-size: 12px;
     display: flex;
     margin-bottom: 2px;
-    font-weight: 900;
+    font-weight: 700;
+    opacity: 0.8;
 }
 .doulist-item .doulist-subject .db--viewTime:after {
     content: "";
@@ -277,7 +278,7 @@
     margin: 0;
     font-size: 16px;
     line-height: 1.3;
-    font-weight: 700;
+    font-weight: inherit;
     color: #0172ad;
     text-decoration: none;
 }
@@ -285,13 +286,13 @@
 .doulist-item .doulist-content .doulist-year {
     font-size: 14px;
     color: #666;
-    font-weight: 400;
+    font-weight: inherit;
 }
 
 .doulist-item .doulist-content .doulist-category {
     font-size: 13px;
     color: #909090;
-    font-weight: 400;
+    font-weight: inherit;
 }
 
 .doulist-item .doulist-content .doulist-subtitle {
@@ -303,7 +304,7 @@
 
 .doulist-item .doulist-meta-line {
     font-size: 13px;
-    color: #5a9fb7;
+    color: var(--db--text-color);
     margin-bottom: 2px;
     line-height: 1.5;
     white-space: nowrap;
@@ -313,12 +314,12 @@
 
 .doulist-item .doulist-meta-line .rating-score {
     font-weight: 700;
-    color: #5a9fb7;
+    color: var(--db--text-color-light);
     font-size: 13px;
 }
 
 .doulist-item .doulist-meta-line .rating-count {
-    color: #808080;
+    color: var(--db--text-color-light);
 }
 
 /* Site badges - exact NeoDB .site-list a replica */
@@ -338,68 +339,127 @@
     border-width: 1px;
     font-size: 11px;
     line-height: 1.4;
-    font-weight: 600;
+    font-weight: inherit;
     text-decoration: none;
     white-space: nowrap;
 }
 
+.doulist-item .site-list .ao3 {
+  border:none;
+  color:white;
+  background-color:#900
+}
+.doulist-item .site-list .qidian,
+.doulist-item .site-list .ypshuo {
+  border:none;
+  color:white;
+  background-color:#9e252b
+}
+.doulist-item .site-list .jjwxc {
+  border:none;
+  color:white;
+  background-color:#3c812e
+}
 .doulist-item .site-list .douban {
-    border: none;
-    color: white;
-    background-color: #319840;
+  border:none;
+  color:white;
+  background-color:#319840
 }
-
-.doulist-item .site-list .tmdb {
-    border: none;
-    background: linear-gradient(90deg, #91CCA3, #1FB4E2);
-    color: white;
-}
-
-.doulist-item .site-list .imdb {
-    border: none;
-    background-color: #F5C518;
-    color: #121212;
-}
-
-.doulist-item .site-list .wikidata {
-    border: none;
-    background-color: #E0E1E2;
-    color: #3B3738;
-}
-
-.doulist-item .site-list .igdb {
-    border: none;
-    background-color: #30353b;
-    color: white;
-}
-
 .doulist-item .site-list .spotify {
-    background-color: #1ed760;
-    color: black;
-    border: none;
+  background-color:#1ed760;
+  color:black;
+  border:none;
+  font-weight:bold
 }
-
-.doulist-item .site-list .fedi {
-    background: #0172ad;
-    color: white;
+.doulist-item .site-list .imdb {
+  background-color:#F5C518;
+  color:#121212;
+  border:none;
+  font-weight:bold
 }
-
+.doulist-item .site-list .igdb {
+  background-color:#323A44;
+  color:#DFE1E2;
+  border:none;
+  font-weight:bold
+}
+.doulist-item .site-list .bgg {
+  background-color:#3F3A60;
+  color:#FFFFFF;
+  font-weight:bold;
+  border:none
+}
 .doulist-item .site-list .steam {
-    background-color: #171a21;
-    color: white;
-    border: none;
+  background:linear-gradient(30deg, #1387b8, #111d2e);
+  color:white;
+  border:none
 }
-
 .doulist-item .site-list .bangumi {
-    border: none;
-    background: #F09199;
-    color: #FCFCFC;
+  background:#F09199;
+  color:#FCFCFC;
+  font-weight:600
 }
-
+.doulist-item .site-list .goodreads {
+  background:#F4F1EA;
+  color:#372213;
+  font-weight:lighter
+}
+.doulist-item .site-list .bookstw {
+  background:#7FBA19;
+  color:white;
+  font-weight:lighter
+}
+.doulist-item .site-list .fedi {
+  background:var(--pico-primary, #0172ad);
+  color:white;
+  font-weight:lighter
+}
+.doulist-item .site-list .tmdb {
+  background:linear-gradient(90deg, #91CCA3, #1FB4E2);
+  color:white;
+  border:none;
+  font-weight:lighter
+}
 .doulist-item .site-list .apple_music {
-    border: none;
-    background: linear-gradient(135deg, #F64464, #F12745);
-    color: white;
+  background:linear-gradient(135deg, #F64464, #F12745);
+  color:white;
+  border:none
+}
+.doulist-item .site-list .googlebooks {
+  color:white;
+  background-color:#4285F4;
+  border-color:#4285F4
+}
+.doulist-item .site-list .rss {
+  color:white;
+  background-color:#E1A02F;
+  border-color:#E1A02F
+}
+.doulist-item .site-list .bandcamp {
+  color:white;
+  background-color:#28A0C1
+}
+.doulist-item .site-list .discogs {
+  color:white;
+  background-color:#262626;
+  border-color:#262626
+}
+.doulist-item .site-list .musicbrainz {
+  color:white;
+  background-color:#E86934;
+  border-color:#E86934
+}
+.doulist-item .site-list .wikidata {
+  color:#3B3738;
+  background-color:#E0E1E2;
+  border:none;
+  font-weight:normal
+}
+.doulist-item .site-list .openlibrary {
+  color:#111111;
+  background-color:#E1DCC5;
+  border-color:#D3CCB0;
+  font-weight:normal
 }
 
 /* Tags list - exact NeoDB .tag-list span a replica */
