@@ -345,22 +345,86 @@ class WP_NEODB {
                     if (type == "card") {
                         item.innerHTML += t
                             .map((movie) => {
+                                // Parse metadata fields (stored as JSON strings)
+                                const director = movie.director ? JSON.parse(movie.director) : [];
+                                const actor = movie.actor ? JSON.parse(movie.actor) : [];
+                                const externalResources = movie.external_resources ? JSON.parse(movie.external_resources) : [];
+                                
+                                // Build external links badges (inline)
+                                let badgesHtml = '';
+                                externalResources.forEach(res => {
+                                    if (!res.url) return;
+                                    let name = '', cls = '';
+                                    if (res.url.includes('douban.com')) { name = '豆瓣'; cls = 'douban'; }
+                                    else if (res.url.includes('themoviedb.org')) { name = 'TMDB'; cls = 'tmdb'; }
+                                    else if (res.url.includes('imdb.com')) { name = 'IMDb'; cls = 'imdb'; }
+                                    else if (res.url.includes('wikidata.org')) { name = '维基数据'; cls = 'wikidata'; }
+                                    else if (res.url.includes('spotify.com')) { name = 'Spotify'; cls = 'spotify'; }
+                                    else if (res.url.includes('igdb.com')) { name = 'IGDB'; cls = 'igdb'; }
+                                    else if (res.url.includes('steampowered.com') || res.url.includes('steamcommunity.com')) { name = 'Steam'; cls = 'steam'; }
+                                    if (name) badgesHtml += ` <a href="${res.url}" class="${cls}" target="_blank" rel="noopener noreferrer">${name}</a>`;
+                                });
+
+                                // Type
+                                const typeMap = {movie: '电影', book: '书籍', music: '音乐', game: '游戏', drama: '戏剧', tv: '剧集', podcast: '播客'};
+                                const typePart = movie.type ? ` <span class="doulist-category">[${typeMap[movie.type] || movie.type}]</span> ` : '';
+                                
+                                // Build Header
+                                const headerHtml = `<div class="doulist-title-header">
+                                    <a href="${this._fixLink(movie.link)}" class="doulist-title cute" target="_blank" rel="external nofollow">${movie.name}</a>
+                                    ${movie.year ? ` <span class="doulist-year">(${movie.year})</span>` : ''}
+                                    ${typePart}
+                                    <span class="site-list">${badgesHtml}</span>
+                                </div>`;
+                                
+                                // Build Subtitle
+                                const subtitleHtml = movie.orig_title && movie.orig_title !== movie.name 
+                                    ? `<div class="doulist-subtitle">${movie.orig_title}</div>` : '';
+
+                                // Meta Line 1: Rating / Other Titles / PubDate
+                                const meta1Items = [];
+                                if (movie.douban_score > 0) {
+                                    meta1Items.push(`<span class="rating-score">${movie.douban_score}</span>`);
+                                }
+                                if (movie.orig_title && movie.orig_title !== movie.name) {
+                                    meta1Items.push(`其它标题: ${movie.orig_title}`);
+                                }
+                                if (movie.pubdate && movie.pubdate !== movie.year) {
+                                    meta1Items.push(movie.pubdate);
+                                }
+                                const meta1Html = meta1Items.length > 0 ? `<div class="doulist-meta-line">${meta1Items.join(' / ')}</div>` : '';
+
+                                // Meta Line 2: Genres / Director / Actor / etc.
+                                const meta2Items = [];
+                                
+                                // Genres
+                                if (movie.genres) {
+                                    const genres = movie.genres.split(',').map(g => g.trim()).filter(g => g !== movie.year && !g.endsWith('s'));
+                                    if (genres.length > 0) {
+                                        meta2Items.push('类型: ' + genres.slice(0, 3).join(' / '));
+                                    }
+                                }
+
+                                const directorLabel = movie.type === 'game' ? '开发者: ' : '导演: ';
+                                const actorLabel = movie.type === 'game' ? '平台: ' : '演员: ';
+                                
+                                if (director.length > 0) meta2Items.push(directorLabel + director.slice(0, 2).join('·'));
+                                if (actor.length > 0) meta2Items.push(actorLabel + actor.slice(0, 4).join(' / '));
+                                
+                                const meta2Html = meta2Items.length > 0 ? `<div class="doulist-meta-line">${meta2Items.join(' / ')}</div>` : '';
+
                                 return `<div class="doulist-item">
                             <div class="doulist-subject">
-                            <div class="db--viewTime JiEun">Marked ${
-                                movie.create_time
-                            }</div>
-                            <div class="doulist-post"><img referrerpolicy="unsafe-url" src="${
-                                movie.poster
-                            }"></div><div class="doulist-content"><div class="doulist-title"><a href="${
-                                    this._fixLink(movie.link)
-                                }" class="cute" target="_blank" rel="external nofollow">${
-                                    movie.name
-                                }</a></div><div class="rating"><span class="allstardark"><span class="allstarlight" style="width:75%"></span></span><span class="rating_nums">${
-                                    movie.douban_score
-                                }</span></div><div class="abstract">${
-                                    movie.remark || movie.card_subtitle
-                                }</div></div></div></div>`;
+                            <div class="db--viewTime JiEun">Marked ${movie.create_time}</div>
+                            <div class="doulist-post"><img referrerpolicy="unsafe-url" src="${movie.poster}"></div>
+                            <div class="doulist-content">
+                                ${headerHtml}
+                                ${subtitleHtml}
+                                ${meta1Html}
+                                ${meta2Html}
+                                <div class="abstract">${movie.remark || movie.card_subtitle || ''}</div>
+                                ${movie.genres ? `<div class="tag-list">${movie.genres.split(',').map(g => `<span><a href="#">${g.trim()}</a></span>`).join('')}</div>` : ''}
+                            </div></div></div>`;
                             })
                             .join("");
                     } else {
