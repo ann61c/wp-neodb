@@ -67,6 +67,8 @@ class WPN_ADMIN extends WPN_NeoDB
 
         if (isset($_POST['wpn_action']) && 'edit_fave' === $_POST['wpn_action']) {
             global $wpdb;
+            $sync_result = null; // Track sync result for response message
+            
             if (isset($_POST['status']) && $_POST['status']) {
                 // Validate status against allowed values
                 $allowed_statuses = ['mark', 'doing', 'done', 'dropped'];
@@ -84,6 +86,35 @@ class WPN_ADMIN extends WPN_NeoDB
                         'id' => intval($_POST['fave_id']),
                     ]
                 );
+                
+                // Sync to NeoDB if requested and conditions are met
+                if (!empty($_POST['sync_to_neodb']) && $_POST['sync_to_neodb'] === '1') {
+                    $subject_id = intval($_POST['subject_id']);
+                    $subject = $wpdb->get_row("SELECT * FROM $wpdb->douban_movies WHERE id = {$subject_id}");
+                    
+                    if ($subject && $subject->neodb_id && $this->db_get_setting('neodb_token')) {
+                        // Map WP-NeoDB status to NeoDB shelf_type
+                        $status_map = [
+                            'mark' => 'wishlist',
+                            'doing' => 'progress',
+                            'done' => 'complete',
+                            'dropped' => 'dropped'
+                        ];
+                        $shelf_type = $status_map[$status_value] ?? 'complete';
+                        
+                        // Get the updated create_time from POST
+                        $created_time = get_gmt_from_date(sanitize_text_field($_POST['create_time']));
+                        
+                        // Sync to NeoDB
+                        $sync_result = $this->sync_mark_to_neodb(
+                            $subject->neodb_id,
+                            $shelf_type,
+                            intval($_POST['score']),
+                            sanitize_textarea_field($_POST['remark']),
+                            $created_time
+                        );
+                    }
+                }
             } else {
                 $wpdb->delete(
                     $wpdb->douban_faves,
@@ -96,7 +127,15 @@ class WPN_ADMIN extends WPN_NeoDB
 
             // Check if this is an AJAX request
             if (wp_doing_ajax() || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
-                wp_send_json_success(['message' => '保存成功']);
+                $response_message = '保存成功';
+                if ($sync_result) {
+                    if ($sync_result['success']) {
+                        $response_message .= '，已同步到NeoDB';
+                    } else {
+                        $response_message .= '，但同步到NeoDB失败: ' . $sync_result['message'];
+                    }
+                }
+                wp_send_json_success(['message' => $response_message]);
                 exit;
             }
 

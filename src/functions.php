@@ -1791,4 +1791,77 @@ class WPN_NeoDB
 
         return $update_data;
     }
+
+    /**
+     * Sync mark to NeoDB
+     * 
+     * @param string $neodb_id NeoDB item UUID
+     * @param string $shelf_type NeoDB shelf type (wishlist|progress|complete|dropped)
+     * @param int $rating_grade Rating 0-10 (0 means no rating)
+     * @param string $comment_text Comment text
+     * @param string $created_time Created time in ISO 8601 format (UTC)
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function sync_mark_to_neodb($neodb_id, $shelf_type, $rating_grade = 0, $comment_text = '', $created_time = '')
+    {
+        $token = $this->db_get_setting('neodb_token');
+        if (!$token) {
+            return ['success' => false, 'message' => 'NeoDB token not configured'];
+        }
+
+        if (!$neodb_id) {
+            return ['success' => false, 'message' => 'NeoDB ID is required'];
+        }
+
+        // Build request body according to NeoDB API spec
+        $body = [
+            'shelf_type' => $shelf_type,
+            'visibility' => 0, // 0 = public
+        ];
+
+        // Add optional fields
+        if ($rating_grade > 0) {
+            $body['rating_grade'] = intval($rating_grade);
+        }
+
+        if (!empty($comment_text)) {
+            $body['comment_text'] = $comment_text;
+        }
+
+        // Convert WordPress GMT time to ISO 8601 format for NeoDB
+        if (!empty($created_time)) {
+            // $created_time is in GMT format from WordPress
+            $timestamp = strtotime($created_time);
+            if ($timestamp !== false) {
+                $body['created_time'] = gmdate('Y-m-d\TH:i:s\Z', $timestamp);
+            }
+        }
+
+        $neodb_url = $this->db_get_setting('neodb_url') ?: 'https://neodb.social';
+        $api_url = rtrim($neodb_url, '/') . "/api/me/shelf/item/{$neodb_id}";
+
+        $response = wp_remote_post($api_url, [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type' => 'application/json',
+            ],
+            'body' => json_encode($body),
+            'sslverify' => false,
+        ]);
+
+        if (is_wp_error($response)) {
+            return ['success' => false, 'message' => 'Request failed: ' . $response->get_error_message()];
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+
+        if ($status_code === 200) {
+            return ['success' => true, 'message' => 'Successfully synced to NeoDB'];
+        } else {
+            $error_data = json_decode($response_body, true);
+            $error_msg = $error_data['message'] ?? 'Unknown error';
+            return ['success' => false, 'message' => "NeoDB API error ({$status_code}): {$error_msg}"];
+        }
+    }
 }

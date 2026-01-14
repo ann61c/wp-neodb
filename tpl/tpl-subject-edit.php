@@ -82,6 +82,22 @@
                     </td>
                 </tr>
                 <?php endif; ?>
+                <?php if ($action == 'edit_fave' && $subject->neodb_id && db_get_setting('neodb_token')): ?>
+                <tr valign="top">
+                    <th scope="row"><label>同步到NeoDB</label></th>
+                    <td>
+                        <p>
+                            <label>
+                                <input type="checkbox" name="sync_to_neodb" value="1" checked />
+                                保存时同时同步到NeoDB
+                            </label>
+                        </p>
+                        <p class="description">
+                            💡 将您的标记（状态、评分、短评、时间）同步到NeoDB
+                        </p>
+                    </td>
+                </tr>
+                <?php endif; ?>
                 <div id="wpn-snackbar" class="refresh-status"></div>
                 <?php if ($action == 'edit_subject') : ?>
                     <tr valign="top">
