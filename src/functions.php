@@ -863,9 +863,10 @@ class WPN_NeoDB
                         $update_data,
                         ['id' => $existing_movie->id]
                     );
+                    // Only log when data is actually updated
+                    $this->add_log($type, 'embed', 'tmdb', "updated existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
                 }
                 $movie_id = $existing_movie->id;
-                $this->add_log($type, 'embed', 'tmdb', "merged with existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
             } else {
                 // Insert new entry
                 $wpdb->insert($wpdb->douban_movies, $insert_data);
@@ -981,9 +982,10 @@ class WPN_NeoDB
                         $update_data,
                         ['id' => $existing_movie->id]
                     );
+                    // Only log when data is actually updated
+                    $this->add_log($type, 'embed', 'douban', "updated existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
                 }
                 $movie_id = $existing_movie->id;
-                $this->add_log($type, 'embed', 'douban', "merged with existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
             } else {
                 // Insert new entry
                 $wpdb->insert($wpdb->douban_movies, $insert_data);
@@ -1038,9 +1040,9 @@ class WPN_NeoDB
         // Check if item already exists by neodb_id
         $movie = $wpdb->get_row($wpdb->prepare("SELECT * FROM $wpdb->douban_movies WHERE `neodb_id` = %s", $uuid));
         
-        // If movie exists, check if essential metadata (like director/actor/pub_house) is missing
-        // If metadata is present, return early. If missing, we continue to fetch and merge.
-        if ($movie && !empty($movie->director) && !empty($movie->actor)) {
+        // If movie exists and has director metadata, return early
+        // Note: We only check director because actor field may be empty for some types (e.g., podcasts without producers)
+        if ($movie && !empty($movie->director)) {
             return $this->populate_db_movie_metadata($movie);
         }
 
@@ -1201,9 +1203,10 @@ class WPN_NeoDB
                     $update_data,
                     ['id' => $existing_movie->id]
                 );
+                // Only log when data is actually updated
+                $this->add_log($type, 'embed', 'neodb', "updated existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
             }
             $movie_id = $existing_movie->id;
-            $this->add_log($type, 'embed', 'neodb', "merged with existing movie: {$existing_movie->name} (ID: {$existing_movie->id})");
         } else {
             // Insert into database as new entry
             $wpdb->insert($wpdb->douban_movies, $insert_data);
