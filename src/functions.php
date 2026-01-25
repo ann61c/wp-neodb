@@ -196,15 +196,19 @@ class WPN_NeoDB
 
     public function render_template($include_types = ['movie', 'music', 'book', 'game', 'drama'], $style = null)
     {
-        $types = ['movie', 'music', 'book', 'game', 'drama'];
+        $valid_types = ['movie', 'music', 'book', 'game', 'drama'];
+        
+        // Normalize and filter input types, strictly following input order
+        $include_types = array_values(array_intersect(
+            array_unique(array_map('trim', $include_types)), 
+            $valid_types
+        ));
+
         $nav = '';
-        $i = 0;
-        foreach ($types as $type) {
-            if (in_array($type, $include_types)) {
-                $nav .= '<div class="db--navItem JiEun' . ($i === 0 ? ' current' : '') . '" data-type="' . $type . '">' . $type . '</div>';
-                $i++;
-            }
+        foreach ($include_types as $i => $type) {
+            $nav .= '<div class="db--navItem JiEun' . ($i === 0 ? ' current' : '') . '" data-type="' . $type . '">' . $type . '</div>';
         }
+
         if (count($include_types) === 1) {
             $nav = '';
         }
@@ -309,6 +313,23 @@ class WPN_NeoDB
             $good->genres = $genres_by_movie[$good->id] ?? [];
             $good = $this->populate_db_movie_metadata($good);
             $good->create_time = date('Y-m-d', strtotime($good->create_time));
+            
+            // Generate HTML for frontend
+            // Determine cover image URL logic consistent with get_subject_detail
+            $cover = $this->db_get_setting('download_image') 
+                ? $this->wpn_save_images($good->id, $good->poster, 'douban') 
+                : (in_array($good->type, ['movie', 'book', 'music']) && !empty($good->douban_id) 
+                    ? "https://dou.img.lithub.cc/" . $good->type . "/" . $good->douban_id . ".jpg" 
+                    : $good->poster);
+            
+            // Use TMDB/NeoDB cache prefix if needed (logic from get_poster_cache_info but simplified here for consistency)
+             if ($this->db_get_setting('download_image')) {
+                 list($cache_id, $cache_prefix) = $this->get_poster_cache_info($good);
+                 $cover = $this->wpn_save_images($cache_id, $good->poster, $cache_prefix);
+             }
+
+            $good->html = $this->render_enhanced_item_html($good, $cover);
+            
             $data[] = $good;
         }
         return new WP_REST_Response($data);

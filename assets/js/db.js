@@ -324,13 +324,14 @@ class WP_NEODB {
     }
 
     _fetchCollection(item) {
-        const type = item.dataset.style ? item.dataset.style : "card";
+        const style = item.dataset.style ? item.dataset.style : "card";
+        const type = item.dataset.type ? item.dataset.type : this.type;
         const url = wpn_base.token
             ? "https://node.wpista.com/v1/outer/faves?token=" + wpn_base.token
             : wpn_base.api + "v1/movies";
         fetch(
             this._addSearchParams(url, {
-                type: this.type,
+                type: type,
                 paged: 1,
                 start_time: item.dataset.start,
                 end_time: item.dataset.end,
@@ -342,83 +343,15 @@ class WP_NEODB {
                 const t = wpn_base.token ? data.data : data;
                 // @ts-ignore
                 if (t.length) {
-                    if (type == "card") {
+                    if (style == "card") {
                         item.innerHTML += t
                             .map((movie) => {
-                                // Parse metadata fields (stored as JSON strings)
-                                const director = movie.director ? JSON.parse(movie.director) : [];
-                                const actor = movie.actor ? JSON.parse(movie.actor) : [];
-                                const externalResources = movie.external_resources ? JSON.parse(movie.external_resources) : [];
-                                
-                                // Build external links badges (inline)
-                                let badgesHtml = '';
-                                // Use PHP-parsed external resources
-                                if (movie.formatted_external_resources) {
-                                    movie.formatted_external_resources.forEach(res => {
-                                        badgesHtml += ` <a href="${res.url}" class="${res.class}" target="_blank" rel="noopener noreferrer">${res.name}</a>`;
-                                    });
+                                // Use server-side rendered HTML if available
+                                if (movie.html) {
+                                    return movie.html;
                                 }
-
-                                // Type
-                                const typeMap = {movie: '影视', book: '书籍', music: '音乐', game: '游戏', drama: '戏剧', tv: '剧集', podcast: '播客'};
-                                const typePart = movie.type ? ` <span class="doulist-category">[${typeMap[movie.type] || movie.type}]</span> ` : '';
-                                
-                                // Build Header
-                                const headerHtml = `<div class="doulist-title-header">
-                                    <a href="${this._fixLink(movie.link)}" class="doulist-title cute" target="_blank" rel="external nofollow">${movie.name}</a>
-                                    ${movie.year ? ` <span class="doulist-year">(${movie.year})</span>` : ''}
-                                    ${typePart}
-                                    <span class="site-list">${badgesHtml}</span>
-                                </div>`;
-                                
-                                // Build Subtitle
-                                const subtitleHtml = movie.orig_title && movie.orig_title !== movie.name 
-                                    ? `<div class="doulist-subtitle">${movie.orig_title}</div>` : '';
-
-                                // Meta Line 1: Rating / Other Titles / PubDate
-                                const meta1Items = [];
-                                if (movie.douban_score > 0) {
-                                    meta1Items.push(`<span class="rating-score">${movie.douban_score}</span>`);
-                                }
-                                if (movie.orig_title && movie.orig_title !== movie.name) {
-                                    meta1Items.push(`其它标题: ${movie.orig_title}`);
-                                }
-                                if (movie.pubdate && movie.pubdate !== movie.year) {
-                                    meta1Items.push(movie.pubdate);
-                                }
-                                const meta1Html = meta1Items.length > 0 ? `<div class="doulist-meta-line">${meta1Items.join(' / ')}</div>` : '';
-
-                                // Meta Line 2: Genres / Director / Actor / etc.
-                                const meta2Items = [];
-                                
-                                // Genres
-                                if (movie.genres) {
-                                    const genres = movie.genres.split(',').map(g => g.trim()).filter(g => g !== movie.year && !g.endsWith('s'));
-                                    if (genres.length > 0) {
-                                        meta2Items.push('类型: ' + genres.slice(0, 3).join(' / '));
-                                    }
-                                }
-
-                                const directorLabel = movie.type === 'game' ? '开发者: ' : '导演: ';
-                                const actorLabel = movie.type === 'game' ? '平台: ' : '演员: ';
-                                
-                                if (director.length > 0) meta2Items.push(directorLabel + director.slice(0, 2).join('·'));
-                                if (actor.length > 0) meta2Items.push(actorLabel + actor.slice(0, 4).join(' / '));
-                                
-                                const meta2Html = meta2Items.length > 0 ? `<div class="doulist-meta-line">${meta2Items.join(' / ')}</div>` : '';
-
-                                return `<div class="doulist-item">
-                            <div class="doulist-subject">
-                            <div class="db--viewTime JiEun">Marked ${movie.create_time}</div>
-                            <div class="doulist-post"><img referrerpolicy="unsafe-url" src="${movie.poster}"></div>
-                            <div class="doulist-content">
-                                ${headerHtml}
-                                ${subtitleHtml}
-                                ${meta1Html}
-                                ${meta2Html}
-                                <div class="abstract">${movie.remark || movie.card_subtitle || ''}</div>
-                                ${movie.genres ? `<div class="tag-list">${movie.genres.split(',').map(g => `<span><a href="#">${g.trim()}</a></span>`).join('')}</div>` : ''}
-                            </div></div></div>`;
+                                // Fallback to client-side rendering (should not happen with updated plugin)
+                                return '';
                             })
                             .join("");
                     } else {
