@@ -9,6 +9,8 @@ class WPN_NeoDB
     private $base_url = 'https://fatesinger.com/dbapi/';
     private $perpage = 70;
     private $uid;
+    private static $genre_mapping_cache = null;
+    private static $site_mapping_cache = null;
 
     public function __construct()
     {
@@ -35,63 +37,69 @@ class WPN_NeoDB
 
     protected function get_genre_mapping()
     {
-        return [
-            'Animation' => '动画',
-            'Sci-Fi' => '科幻',
-            'Mystery' => '悬疑',
-            'Action' => '动作',
-            'Comedy' => '喜剧',
-            'Romance' => '爱情',
-            'Thriller' => '惊悚',
-            'Crime' => '犯罪',
-            'Adventure' => '冒险',
-            'Fantasy' => '奇幻',
-            'Drama' => '剧情',
-            'Horror' => '恐怖',
-            'War' => '战争',
-            'Documentary' => '纪录片',
-            'Biography' => '传记',
-            'History' => '历史',
-            'Family' => '家庭',
-            'Musical' => '音乐',
-            'Sport' => '运动',
-            'Western' => '西部',
-            'Suspense' => '悬疑',
-        ];
+        if (self::$genre_mapping_cache === null) {
+            self::$genre_mapping_cache = [
+                'Animation' => '动画',
+                'Sci-Fi' => '科幻',
+                'Mystery' => '悬疑',
+                'Action' => '动作',
+                'Comedy' => '喜剧',
+                'Romance' => '爱情',
+                'Thriller' => '惊悚',
+                'Crime' => '犯罪',
+                'Adventure' => '冒险',
+                'Fantasy' => '奇幻',
+                'Drama' => '剧情',
+                'Horror' => '恐怖',
+                'War' => '战争',
+                'Documentary' => '纪录片',
+                'Biography' => '传记',
+                'History' => '历史',
+                'Family' => '家庭',
+                'Musical' => '音乐',
+                'Sport' => '运动',
+                'Western' => '西部',
+                'Suspense' => '悬疑',
+            ];
+        }
+        return self::$genre_mapping_cache;
     }
 
     protected function get_site_mapping()
     {
-        return [
-            'douban.com' => ['name' => '豆瓣', 'class' => 'douban'],
-            'themoviedb.org' => ['name' => 'TMDB', 'class' => 'tmdb'],
-            'imdb.com' => ['name' => 'IMDb', 'class' => 'imdb'],
-            'wikidata.org' => ['name' => '维基数据', 'class' => 'wikidata'],
-            'spotify.com' => ['name' => 'Spotify', 'class' => 'spotify'],
-            'goodreads.com' => ['name' => 'Goodreads', 'class' => 'goodreads'],
-            'steampowered.com' => ['name' => 'Steam', 'class' => 'steam'],
-            'steamcommunity.com' => ['name' => 'Steam', 'class' => 'steam'],
-            'igdb.com' => ['name' => 'IGDB', 'class' => 'igdb'],
-            'bangumi.tv' => ['name' => 'Bangumi', 'class' => 'bangumi'],
-            'bgm.tv' => ['name' => 'Bangumi', 'class' => 'bangumi'],
-            'archiveofourown.org' => ['name' => 'AO3', 'class' => 'ao3'],
-            'qidian.com' => ['name' => '起点中文网', 'class' => 'qidian'],
-            'jjwxc.net' => ['name' => '晋江文学城', 'class' => 'jjwxc'],
-            'boardgamegeek.com' => ['name' => 'BGG', 'class' => 'bgg'],
-            'books.com.tw' => ['name' => '博客来', 'class' => 'bookstw'],
-            'books.google' => ['name' => 'Google Books', 'class' => 'googlebooks'],
-            'bandcamp.com' => ['name' => 'Bandcamp', 'class' => 'bandcamp'],
-            'discogs.com' => ['name' => 'Discogs', 'class' => 'discogs'],
-            'musicbrainz.org' => ['name' => 'MusicBrainz', 'class' => 'musicbrainz'],
-            'openlibrary.org' => ['name' => 'Open Library', 'class' => 'openlibrary'],
-            'music.apple.com' => ['name' => 'Apple Music', 'class' => 'apple_music'],
-            'xiaoyuzhoufm.com' => ['name' => '小宇宙', 'class' => 'rss'],
-            '/^https?:\/\/feed\./i' => ['name' => 'RSS', 'class' => 'rss'],
-            'neodb.' => ['name' => 'NeoDB', 'class' => 'fedi'],
-            'minreol.dk' => ['name' => 'minreol.dk', 'class' => 'fedi'],
-            'eggplant.place' => ['name' => 'eggplant.place', 'class' => 'fedi'],
-            'fantastika.social' => ['name' => 'fantastika.social', 'class' => 'fedi'],
-        ];
+        if (self::$site_mapping_cache === null) {
+            self::$site_mapping_cache = [
+                'douban.com' => ['name' => '豆瓣', 'class' => 'douban'],
+                'themoviedb.org' => ['name' => 'TMDB', 'class' => 'tmdb'],
+                'imdb.com' => ['name' => 'IMDb', 'class' => 'imdb'],
+                'wikidata.org' => ['name' => '维基数据', 'class' => 'wikidata'],
+                'spotify.com' => ['name' => 'Spotify', 'class' => 'spotify'],
+                'goodreads.com' => ['name' => 'Goodreads', 'class' => 'goodreads'],
+                'steampowered.com' => ['name' => 'Steam', 'class' => 'steam'],
+                'steamcommunity.com' => ['name' => 'Steam', 'class' => 'steam'],
+                'igdb.com' => ['name' => 'IGDB', 'class' => 'igdb'],
+                'bangumi.tv' => ['name' => 'Bangumi', 'class' => 'bangumi'],
+                'bgm.tv' => ['name' => 'Bangumi', 'class' => 'bangumi'],
+                'archiveofourown.org' => ['name' => 'AO3', 'class' => 'ao3'],
+                'qidian.com' => ['name' => '起点中文网', 'class' => 'qidian'],
+                'jjwxc.net' => ['name' => '晋江文学城', 'class' => 'jjwxc'],
+                'boardgamegeek.com' => ['name' => 'BGG', 'class' => 'bgg'],
+                'books.com.tw' => ['name' => '博客来', 'class' => 'bookstw'],
+                'books.google' => ['name' => 'Google Books', 'class' => 'googlebooks'],
+                'bandcamp.com' => ['name' => 'Bandcamp', 'class' => 'bandcamp'],
+                'discogs.com' => ['name' => 'Discogs', 'class' => 'discogs'],
+                'musicbrainz.org' => ['name' => 'MusicBrainz', 'class' => 'musicbrainz'],
+                'openlibrary.org' => ['name' => 'Open Library', 'class' => 'openlibrary'],
+                'music.apple.com' => ['name' => 'Apple Music', 'class' => 'apple_music'],
+                'xiaoyuzhoufm.com' => ['name' => '小宇宙', 'class' => 'rss'],
+                '/^https?:\/\/feed\./i' => ['name' => 'RSS', 'class' => 'rss'],
+                'neodb.' => ['name' => 'NeoDB', 'class' => 'fedi'],
+                'minreol.dk' => ['name' => 'minreol.dk', 'class' => 'fedi'],
+                'eggplant.place' => ['name' => 'eggplant.place', 'class' => 'fedi'],
+                'fantastika.social' => ['name' => 'fantastika.social', 'class' => 'fedi'],
+            ];
+        }
+        return self::$site_mapping_cache;
     }
 
     public function add_log($type = 'movie', $action = 'sync', $source = 'douban', $message = '')
@@ -489,6 +497,7 @@ class WPN_NeoDB
         
         // Parse from external_resources field
         $resources = $this->parse_json_field($data, 'external_resources');
+        $site_map = $this->get_site_mapping();
         
         foreach ($resources as $resource) {
             if (empty($resource['url'])) {
@@ -496,10 +505,7 @@ class WPN_NeoDB
             }
             $url = $resource['url'];
             
-            $url = $resource['url'];
-            
             // Check known websites using map
-            $site_map = $this->get_site_mapping();
             $matched = false;
             
             foreach ($site_map as $key => $site_info) {
@@ -525,7 +531,7 @@ class WPN_NeoDB
                 $parsed = parse_url($url);
                 $hostname = $parsed['host'] ?? 'Link';
                 // Remove 'www.' prefix if present
-                $display_name = preg_replace('/^www\./', '', $hostname);
+                $display_name = preg_replace('/^www\\./', '', $hostname);
                 $links[] = ['url' => $url, 'name' => $display_name, 'class' => 'external'];
             }
         }
@@ -1799,7 +1805,7 @@ class WPN_NeoDB
                 if (!empty($resource['url'])) {
                     $parsed = parse_url($resource['url']);
                     if (isset($parsed['host'])) {
-                        $existing_hosts[] = $parsed['host'];
+                        $existing_hosts[$parsed['host']] = true;
                     }
                 }
             }
@@ -1808,9 +1814,9 @@ class WPN_NeoDB
             foreach ($new_resources as $resource) {
                 if (!empty($resource['url'])) {
                     $parsed = parse_url($resource['url']);
-                    if (isset($parsed['host']) && !in_array($parsed['host'], $existing_hosts)) {
+                    if (isset($parsed['host']) && !isset($existing_hosts[$parsed['host']])) {
                         $merged[] = $resource;
-                        $existing_hosts[] = $parsed['host'];
+                        $existing_hosts[$parsed['host']] = true;  
                     }
                 }
             }
