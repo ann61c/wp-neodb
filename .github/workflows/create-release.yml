@@ -1,0 +1,26 @@
+name: Create Release Archive
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Archive Release
+        uses: thedoctor0/zip-release@0.7.5
+        with:
+          type: 'zip'
+          filename: 'wp-neodb.zip'
+          exclusions: '*.git* /*node_modules/* /*vendor/* *.DS_Store composer.json composer.lock rector.php'
+      
+      - name: Upload Release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          artifacts: "wp-neodb.zip"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
