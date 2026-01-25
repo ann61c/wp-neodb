@@ -4,7 +4,7 @@
  */
 class WPN_NeoDB
 {
-    const VERSION = '4.4.5';
+    const VERSION = '5.1.0';
     private $base_url = 'https://fatesinger.com/dbapi/';
     private $perpage = 70;
     private $uid;
