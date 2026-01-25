@@ -284,8 +284,29 @@ class WPN_NeoDB
             $goods = $wpdb->get_results("SELECT m.*, f.create_time, f.remark, f.status FROM $wpdb->douban_movies m LEFT JOIN $wpdb->douban_faves f ON m.id = f.subject_id WHERE f.type = '{$type}' AND f.status = '{$status}' {$filterTime} ORDER BY f.create_time DESC LIMIT {$this->perpage} OFFSET {$offset}");
         }
 
+        // ✅ N+1 Query Optimization: Batch fetch genres and faves for all items
+        $movie_ids = array_column($goods, 'id');
+        
+        // Batch fetch genres (1 query instead of N)
+        $genres_by_movie = [];
+        if (!empty($movie_ids)) {
+            $ids_placeholder = implode(',', array_map('intval', $movie_ids));
+            $all_genres = $wpdb->get_results(
+                "SELECT movie_id, name FROM $wpdb->douban_genres WHERE movie_id IN ($ids_placeholder)"
+            );
+            foreach ($all_genres as $genre_row) {
+                $genres_by_movie[$genre_row->movie_id][] = $genre_row->name;
+            }
+        }
+
+        // Note: faves data is already joined in the main query above, so no extra query needed
+
         $data = [];
         foreach ($goods as $good) {
+            // Pre-populate genres from batch query
+            $good->genres = $genres_by_movie[$good->id] ?? [];
+            
+            // Call populate with batch data
             $good = $this->populate_db_movie_metadata($good);
             $good->create_time = date('Y-m-d', strtotime($good->create_time));
             $data[] = $good;
@@ -1553,7 +1574,7 @@ class WPN_NeoDB
         }
         global $wpdb;
 
-        // Populate Genres
+        // Populate Genres (skip if already populated by batch query)
         if (empty($movie->genres)) {
             $movie->genres = [];
             $genres = $wpdb->get_results("SELECT * FROM $wpdb->douban_genres WHERE `movie_id` = {$movie->id}");
@@ -1564,14 +1585,22 @@ class WPN_NeoDB
             }
         }
 
-        // Populate Favorite data
-        $fav = $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE `subject_id` = '{$movie->id}'");
-        if ($fav) {
-            $movie->fav_time = $fav->create_time;
-            $movie->score = $fav->score;
-            $movie->remark = $fav->remark;
-            $movie->status = $fav->status;
+        // Populate Favorite data (skip if already populated by JOIN query)
+        // Check if fave data is already present (from get_subjects JOIN)
+        if (!isset($movie->fav_time)) {
+            $fav = $wpdb->get_row("SELECT * FROM $wpdb->douban_faves WHERE `subject_id` = '{$movie->id}'");
+            if ($fav) {
+                $movie->fav_time = $fav->create_time;
+                $movie->score = $fav->score;
+                $movie->remark = $fav->remark;
+                $movie->status = $fav->status;
+            } else {
+                $movie->fav_time = "";
+                $movie->score = "";
+                $movie->remark = "";
+            }
         } else {
+            // Data already present from JOIN, just ensure defaults
             $movie->fav_time ??= "";
             $movie->score ??= "";
             $movie->remark ??= "";
