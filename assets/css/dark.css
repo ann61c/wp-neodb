@@ -1,0 +1,9 @@
+/* Dark Mode CSS Variables - Always Dark */
+:root {
+    --db-main-color: rgba(0, 87, 217);
+    --db-hover-color: rgba(255, 255, 255, 0.5);
+    --db--text-color: rgba(255, 255, 255, 0.8);
+    --db--text-color-light: rgba(255, 255, 255, 0.6);
+    --db--background-gray: #3c3c3c;
+    --db-border-color: rgba(255, 255, 255, 0.1);
+}
