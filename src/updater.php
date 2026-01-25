@@ -1,22 +1,17 @@
 <?php
 
 class WPN_Updater {
-    private $file;
     private $plugin;
     private $basename;
     private $active;
-    private $username;
-    private $repository;
+    private $username = 'ann61c';
+    private $repository = 'wp-neodb';
     private $github_response;
 
-    public function __construct($file) {
-        $this->file = $file;
+    public function __construct(private $file) {
         $this->plugin = plugin_basename($this->file);
         $this->basename = plugin_basename($this->file);
         $this->active = is_plugin_active($this->plugin);
-        $this->username = 'ann61c';
-        $this->repository = 'wp-neodb';
-
         add_filter('pre_set_site_transient_update_plugins', [$this, 'check_update']);
         add_filter('plugins_api', [$this, 'plugin_popup'], 10, 3);
         add_filter('upgrader_source_selection', [$this, 'upgrader_source_selection'], 10, 4);
@@ -47,7 +42,7 @@ class WPN_Updater {
         $response_body = wp_remote_retrieve_body($response);
         $releases = json_decode($response_body);
 
-        if (is_array($releases) && !empty($releases)) {
+        if (is_array($releases) && $releases !== []) {
             // Get the latest release (first item is usually latest)
             $this->github_response = $releases[0];
             
@@ -71,7 +66,7 @@ class WPN_Updater {
             $new_version = $release->tag_name;
             // Remove 'v' prefix if present
             $new_version = ltrim($new_version, 'v');
-            $current_version = isset($transient->checked[$this->plugin]) ? $transient->checked[$this->plugin] : '0';
+            $current_version = $transient->checked[$this->plugin] ?? '0';
 
             if (version_compare($new_version, $current_version, '>')) {
                 $obj = new stdClass();

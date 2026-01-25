@@ -8,8 +8,8 @@ class WPN_NeoDB
     private $base_url = 'https://fatesinger.com/dbapi/';
     private $perpage = 70;
     private $uid;
-    private static $genre_mapping_cache = null;
-    private static $site_mapping_cache = null;
+    private static $genre_mapping_cache;
+    private static $site_mapping_cache;
 
     public function __construct()
     {
@@ -296,7 +296,7 @@ class WPN_NeoDB
 
         $movie_ids = array_column($goods, 'id');
         $genres_by_movie = [];
-        if (!empty($movie_ids)) {
+        if ($movie_ids !== []) {
             $ids_placeholder = implode(',', array_map('intval', $movie_ids));
             $all_genres = $wpdb->get_results(
                 "SELECT movie_id, name FROM $wpdb->douban_genres WHERE movie_id IN ($ids_placeholder)"
@@ -324,7 +324,7 @@ class WPN_NeoDB
             
             // Use TMDB/NeoDB cache prefix if needed (logic from get_poster_cache_info but simplified here for consistency)
              if ($this->db_get_setting('download_image')) {
-                 list($cache_id, $cache_prefix) = $this->get_poster_cache_info($good);
+                 [$cache_id, $cache_prefix] = $this->get_poster_cache_info($good);
                  $cover = $this->wpn_save_images($cache_id, $good->poster, $cache_prefix);
              }
 
@@ -527,13 +527,11 @@ class WPN_NeoDB
                         $matched = true;
                         break;
                     }
-                } else {
+                } elseif (str_contains($url, $key)) {
                     // Treat as string containment
-                    if (str_contains($url, $key)) {
-                        $links[] = ['url' => $url, 'name' => $site_info['name'], 'class' => $site_info['class']];
-                        $matched = true;
-                        break;
-                    }
+                    $links[] = ['url' => $url, 'name' => $site_info['name'], 'class' => $site_info['class']];
+                    $matched = true;
+                    break;
                 }
             }
             
@@ -593,8 +591,8 @@ class WPN_NeoDB
         // Pattern 2: www.douban.com/game/123 -> matches[3]=type, matches[4]=id
         // Pattern 2b: www.douban.com/location/drama/123 -> matches[3]=type, matches[4]=id
         
-        $type = !empty($matches[1]) ? $matches[1] : $matches[3];
-        $id = !empty($matches[2]) ? $matches[2] : $matches[4];
+        $type = empty($matches[1]) ? $matches[3] : $matches[1];
+        $id = empty($matches[2]) ? $matches[4] : $matches[2];
         
         $html = $this->get_subject_detail($id, $type, $url);
         return apply_filters('embed_forbes', $html, $matches, $attr, $url, $rawattr);
@@ -1183,7 +1181,7 @@ class WPN_NeoDB
         }
 
         // Map NeoDB data to internal format
-        list($type, $insert_data) = $this->map_neodb_data($data, $neodb_type, $uuid);
+        [$type, $insert_data] = $this->map_neodb_data($data, $neodb_type, $uuid);
 
         // Use universal deduplication helper to check all ID types
         $existing_movie = $this->find_existing_movie(
@@ -1388,7 +1386,7 @@ class WPN_NeoDB
         }
         
         // Batch query existing relations
-        if (!empty($movie_ids_to_check)) {
+        if ($movie_ids_to_check !== []) {
             $placeholders = implode(',', array_fill(0, count($movie_ids_to_check), '%d'));
             $query = $wpdb->prepare(
                 "SELECT movie_id FROM {$wpdb->douban_relation} 
@@ -1701,7 +1699,7 @@ class WPN_NeoDB
 
         // Handle Image Cache or Proxy
         if ($this->db_get_setting('download_image')) {
-            list($cache_id, $cache_prefix) = $this->get_poster_cache_info($movie);
+            [$cache_id, $cache_prefix] = $this->get_poster_cache_info($movie);
             $movie->poster = $this->wpn_save_images($cache_id, $movie->poster, $cache_prefix);
         } elseif (in_array($movie->type, ['movie', 'book', 'music']) && !empty($movie->douban_id)) {
             $movie->poster = "https://dou.img.lithub.cc/{$movie->type}/{$movie->douban_id}.jpg";
